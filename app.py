@@ -357,7 +357,7 @@ sensitivity = 0.02
 correlation_window = 15
 hours = 24
 
-with st.expander("⚙️ Detection Settings", expanded=False):
+with st.expander("Analysis Parameters", expanded=False):
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         sensitivity = st.slider(
