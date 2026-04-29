@@ -5,7 +5,7 @@ Email alert system for BioSense using Resend.
 Sends alerts when anomalies or correlated drifts are detected.
 """
 
-import resend
+# resend imported lazily inside functions#
 from datetime import datetime
 
 
