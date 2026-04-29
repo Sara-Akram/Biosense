@@ -18,7 +18,7 @@ st.set_page_config(
     page_title="BioSense",
     page_icon="◆",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ── Dark theme CSS ───────────────────────────────────────────
@@ -274,63 +274,36 @@ def dark_layout(height=280):
 st.markdown("<h1 style='margin-bottom:0'>◆ BioSense</h1>", unsafe_allow_html=True)
 st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
 
-# Mobile-friendly top controls (visible on small screens)
-st.markdown("""
-<style>
-.mobile-controls { display: none; }
-@media (max-width: 768px) {
-    .mobile-controls { display: block; margin-bottom: 16px; }
-}
-</style>
-<div class="mobile-controls">
-  <p style="font-size:12px;color:#4a7a9f;margin:8px 0 4px">
-    Use the <strong style="color:#38bdf8">← arrow on the left edge</strong> to open settings
-  </p>
-</div>
-""", unsafe_allow_html=True)
 
-
-# ── Sidebar (advanced settings only) ─────────────────────────
+# ── Sidebar (alert settings only) ────────────────────────────
 with st.sidebar:
-    st.markdown("### Detection settings")
-
-    sensitivity = st.slider(
-        "ML sensitivity", min_value=0.01, max_value=0.10, value=0.02, step=0.01,
-        help="Lower = fewer false alarms"
-    )
-    correlation_window = st.slider(
-        "Correlation window (min)", min_value=5, max_value=60, value=15, step=5,
-        help="Rolling window for correlation analysis"
-    )
-
-    st.divider()
-    st.markdown("### Alert settings")
+    st.markdown("### Alert Settings")
 
     alerts_enabled = st.toggle("Enable email alerts", value=False)
 
     if alerts_enabled:
         resend_api_key = st.text_input(
-            "Resend API key",
+            "Resend API Key",
             type="password",
             placeholder="re_xxxxxxxxxxxx",
             help="Get your free API key at resend.com"
         )
         alert_email = st.text_input(
-            "Send alerts to",
+            "Send Alerts To",
             placeholder="lab@yourcompany.com",
         )
         from_email = st.text_input(
-            "Send alerts from",
+            "Send Alerts From",
             value="onboarding@resend.dev",
-            help="Use onboarding@resend.dev for testing. Add your own domain in Resend for production."
+            help="Use onboarding@resend.dev for testing."
         )
         alert_severity = st.selectbox(
-            "Minimum severity to alert",
-            ["critical only", "warning and above", "all"],
+            "Minimum Severity To Alert",
+            ["Critical only", "Warning and above", "All"],
             index=1,
         )
 
-        if st.button("Send test email"):
+        if st.button("Send Test Email"):
             if resend_api_key and alert_email:
                 from alerts import send_alert
                 with st.spinner("Sending..."):
@@ -355,7 +328,7 @@ with st.sidebar:
         resend_api_key = None
         alert_email = None
         from_email = "onboarding@resend.dev"
-        alert_severity = "warning and above"
+        alert_severity = "Warning and above"
 
     st.divider()
     st.markdown("<div style='text-align:center;margin-top:2rem'>"
@@ -364,21 +337,40 @@ with st.sidebar:
                 "</div>", unsafe_allow_html=True)
 
 
-# ── Data source toggle (main page — visible on all devices) ───
-st.markdown("<div style='margin:16px 0 8px'>", unsafe_allow_html=True)
+# ── Data source toggle ────────────────────────────────────────
 col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
 with col_toggle1:
-    if st.button("📊 Simulated demo", use_container_width=True):
+    if st.button("📊 Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
     if st.button("📁 Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
-st.markdown("</div>", unsafe_allow_html=True)
 
 if "data_source" not in st.session_state:
     st.session_state.data_source = "Simulated demo data"
 
 data_source = st.session_state.data_source
+
+# ── Settings expander — always accessible ─────────────────────
+# Define defaults first so they're always available
+sensitivity = 0.02
+correlation_window = 15
+hours = 24
+
+with st.expander("⚙️ Detection Settings", expanded=False):
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        sensitivity = st.slider(
+            "ML Sensitivity", min_value=0.01, max_value=0.10, value=0.02, step=0.01,
+            help="Lower = fewer false alarms, higher = catches more subtle anomalies"
+        )
+    with col_s2:
+        correlation_window = st.slider(
+            "Correlation Window (Min)", min_value=5, max_value=60, value=15, step=5,
+            help="Rolling window for correlation analysis"
+        )
+    if data_source == "Simulated demo data":
+        hours = st.slider("Monitoring Window (Hours)", 6, 48, 24)
 
 
 # ── Data loading ─────────────────────────────────────────────
@@ -386,7 +378,7 @@ df = None
 sensor_cols = None
 
 if data_source == "Upload CSV":
-    st.subheader("Upload data")
+    st.subheader("Upload Data")
     st.markdown("<p style='color:#6060a0;font-size:14px'>CSV with a timestamp column and 2+ numeric sensor columns</p>", unsafe_allow_html=True)
 
     with st.expander("Example CSV format"):
@@ -433,8 +425,6 @@ if data_source == "Upload CSV":
             st.error(f"Could not read file: {e}")
 
 else:
-    hours = st.slider("Monitoring window (hours)", 6, 48, 24)
-
     @st.cache_data
     def load_demo(hours):
         return generate_bioreactor_data(hours=hours)
@@ -517,7 +507,7 @@ if df is not None and sensor_cols is not None:
         st.metric("Anomalies", total_anomalies, delta=f"{len(drift_events)} correlated", delta_color="inverse")
 
     # ── Sensor charts ────────────────────────────────────────
-    st.subheader("Sensor readings")
+    st.subheader("Sensor Readings")
 
     # Clean labels and distinct colors per sensor
     sensor_display = {
@@ -610,7 +600,7 @@ if df is not None and sensor_cols is not None:
             st.plotly_chart(fig, use_container_width=True)
 
     # ── ML anomaly score ─────────────────────────────────────
-    st.subheader("Anomaly score")
+    st.subheader("Anomaly Score")
     fig_s = go.Figure()
     fig_s.add_trace(go.Scatter(
         x=df["timestamp"], y=df["anomaly_score"], mode="lines",
@@ -631,7 +621,7 @@ if df is not None and sensor_cols is not None:
     st.plotly_chart(fig_s, use_container_width=True)
 
     # ── Correlation section ──────────────────────────────────
-    st.subheader("Correlation analysis")
+    st.subheader("Correlation Analysis")
     st.caption("Shows when sensor relationships changed — sudden shifts indicate a single root cause affecting multiple sensors")
 
     col_a, col_b = st.columns(2)
@@ -808,7 +798,7 @@ if df is not None and sensor_cols is not None:
         st.plotly_chart(fig_r, use_container_width=True)
 
     # ── Event log ────────────────────────────────────────────
-    st.subheader("Event log")
+    st.subheader("Event Log")
     events = []
     anom_rows = df[df["detected_anomaly"] == 1]
     for _, row in anom_rows.iterrows():
