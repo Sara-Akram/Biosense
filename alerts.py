@@ -36,6 +36,7 @@ def send_alert(
         recommendation — what to do about it (optional)
         dashboard_url — link to the BioSense dashboard
     """
+        import resend
     resend.api_key = api_key
 
     # Color and emoji based on severity
