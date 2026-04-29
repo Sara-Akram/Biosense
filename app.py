@@ -18,6 +18,7 @@ st.set_page_config(
     page_title="BioSense",
     page_icon="◆",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 # ── Dark theme CSS ───────────────────────────────────────────
@@ -27,6 +28,32 @@ st.markdown("""
     .stApp, .main, [data-testid="stAppViewContainer"],
     [data-testid="stHeader"], [data-testid="stToolbar"] {
         background-color: #0a0a0f !important;
+    }
+
+    /* Always show sidebar toggle button on mobile */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        background: #1a3a5c !important;
+        border-radius: 0 8px 8px 0 !important;
+        padding: 8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 999 !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        fill: #38bdf8 !important;
+    }
+
+    /* Make sidebar full screen on mobile */
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {
+            width: 100% !important;
+            min-width: 100% !important;
+        }
+        section[data-testid="stSidebar"] > div {
+            width: 100% !important;
+        }
     }
     .block-container {
         padding-top: 2rem;
@@ -258,6 +285,21 @@ def dark_layout(height=280):
 # ── Header ───────────────────────────────────────────────────
 st.markdown("<h1 style='margin-bottom:0'>◆ BioSense</h1>", unsafe_allow_html=True)
 st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
+
+# Mobile-friendly top controls (visible on small screens)
+st.markdown("""
+<style>
+.mobile-controls { display: none; }
+@media (max-width: 768px) {
+    .mobile-controls { display: block; margin-bottom: 16px; }
+}
+</style>
+<div class="mobile-controls">
+  <p style="font-size:12px;color:#4a7a9f;margin:8px 0 4px">
+    Use the <strong style="color:#38bdf8">← arrow on the left edge</strong> to open settings
+  </p>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ── Sidebar ──────────────────────────────────────────────────
