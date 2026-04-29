@@ -401,7 +401,7 @@ if data_source == "Upload CSV":
         })
         st.dataframe(example, use_container_width=True)
 
-    uploaded_file = st.file_uploader("", type=["csv"], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"], label_visibility="collapsed")
 
     if uploaded_file is not None:
         try:
