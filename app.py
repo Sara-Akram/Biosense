@@ -18,7 +18,7 @@ st.set_page_config(
     page_title="BioSense",
     page_icon="◆",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ── Dark theme CSS ───────────────────────────────────────────
@@ -30,32 +30,17 @@ st.markdown("""
         background-color: #0a0a0f !important;
     }
 
-    /* Always show sidebar expand button visibly */
-    [data-testid="collapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        background: #1a3a5c !important;
-        border-radius: 0 8px 8px 0 !important;
-        padding: 12px 8px !important;
-        z-index: 999 !important;
-        left: 0 !important;
-        top: 80px !important;
-        position: fixed !important;
-    }
-    [data-testid="collapsedControl"] svg {
-        fill: #38bdf8 !important;
-        width: 20px !important;
-        height: 20px !important;
-    }
-
-    /* Make sidebar full screen on mobile */
+    /* Hide sidebar completely on mobile */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
-            width: 100% !important;
-            min-width: 100% !important;
+            display: none !important;
         }
-        section[data-testid="stSidebar"] > div {
-            width: 100% !important;
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
     }
     .block-container {
