@@ -30,19 +30,22 @@ st.markdown("""
         background-color: #0a0a0f !important;
     }
 
-    /* Always show sidebar toggle button on mobile */
+    /* Always show sidebar expand button visibly */
     [data-testid="collapsedControl"] {
         display: flex !important;
         visibility: visible !important;
         background: #1a3a5c !important;
         border-radius: 0 8px 8px 0 !important;
-        padding: 8px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
+        padding: 12px 8px !important;
         z-index: 999 !important;
+        left: 0 !important;
+        top: 80px !important;
+        position: fixed !important;
     }
     [data-testid="collapsedControl"] svg {
         fill: #38bdf8 !important;
+        width: 20px !important;
+        height: 20px !important;
     }
 
     /* Make sidebar full screen on mobile */
@@ -302,16 +305,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── Sidebar ──────────────────────────────────────────────────
+# ── Sidebar (advanced settings only) ─────────────────────────
 with st.sidebar:
-    st.markdown("### Data source")
-    data_source = st.radio(
-        "Source",
-        ["Upload CSV", "Simulated demo data"],
-        label_visibility="collapsed",
-    )
-
-    st.divider()
     st.markdown("### Detection settings")
 
     sensitivity = st.slider(
@@ -384,6 +379,23 @@ with st.sidebar:
                 "</div>", unsafe_allow_html=True)
 
 
+# ── Data source toggle (main page — visible on all devices) ───
+st.markdown("<div style='margin:16px 0 8px'>", unsafe_allow_html=True)
+col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
+with col_toggle1:
+    if st.button("📊 Simulated demo", use_container_width=True):
+        st.session_state.data_source = "Simulated demo data"
+with col_toggle2:
+    if st.button("📁 Upload CSV", use_container_width=True):
+        st.session_state.data_source = "Upload CSV"
+st.markdown("</div>", unsafe_allow_html=True)
+
+if "data_source" not in st.session_state:
+    st.session_state.data_source = "Simulated demo data"
+
+data_source = st.session_state.data_source
+
+
 # ── Data loading ─────────────────────────────────────────────
 df = None
 sensor_cols = None
@@ -436,7 +448,7 @@ if data_source == "Upload CSV":
             st.error(f"Could not read file: {e}")
 
 else:
-    hours = st.sidebar.slider("Monitoring window (hours)", 6, 48, 24)
+    hours = st.slider("Monitoring window (hours)", 6, 48, 24)
 
     @st.cache_data
     def load_demo(hours):
