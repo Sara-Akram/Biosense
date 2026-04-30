@@ -1061,13 +1061,10 @@ if df is not None and sensor_cols is not None:
                 </div>"""
 
             # Fixed window showing exactly 3 events — scroll inside to see older ones
-            all_html = """
-<div style='overflow-y:auto;height:330px;margin-left:16px'>
-  <div style='position:relative;padding-left:24px;border-left:1px solid rgba(56,138,221,0.2)'>
-"""
+            events_html = ""
             for ev in timeline_events:
-                all_html += render_tl_event(ev)
-            all_html += "</div></div>"
+                events_html += render_tl_event(ev)
+            all_html = f"<div style='overflow-y:auto;height:330px;margin-left:16px'><div style='position:relative;padding-left:24px;border-left:1px solid rgba(56,138,221,0.2)'>{events_html}</div></div>"
             st.markdown(all_html, unsafe_allow_html=True)
         else:
             st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlation changes detected in this window</div>", unsafe_allow_html=True)
