@@ -641,6 +641,78 @@ if df is not None and sensor_cols is not None:
                   <p style="font-size:11px;color:#4a6a8a;margin:0;font-family:monospace">{exp['technical_detail']}</p>
                 </div>
                 """, unsafe_allow_html=True)
+
+                # ── Predictive maintenance window ─────────────
+                col_vals = df[col_name].values
+                timestamps = df["timestamp"].values
+
+                # Calculate drift rate over last 20% of readings
+                window_size = max(10, len(col_vals) // 5)
+                recent = col_vals[-window_size:]
+                time_hrs = window_size * 5 / 60  # assuming 5-min intervals
+
+                drift_per_hour = (recent[-1] - recent[0]) / time_hrs if time_hrs > 0 else 0
+
+                # Estimate threshold (2 std devs from mean as default)
+                mean_val = float(np.mean(col_vals))
+                std_val = float(np.std(col_vals))
+                current_val = float(col_vals[-1])
+
+                if drift_per_hour > 0:
+                    threshold = mean_val + 2 * std_val
+                    gap = threshold - current_val
+                elif drift_per_hour < 0:
+                    threshold = mean_val - 2 * std_val
+                    gap = current_val - threshold
+                else:
+                    gap = None
+
+                if drift_per_hour != 0 and gap is not None and gap > 0:
+                    hours_to_breach = gap / abs(drift_per_hour)
+                    drift_label = f"+{drift_per_hour:.2f}" if drift_per_hour > 0 else f"{drift_per_hour:.2f}"
+                    unit = sensor_display.get(col_name, {}).get("unit", "")
+                    label = sensor_display.get(col_name, {}).get("label", col_name)
+
+                    if hours_to_breach < 2:
+                        window_color = "#ef4444"
+                        window_bg = "rgba(239,68,68,0.08)"
+                        urgency = "Immediate action required"
+                    elif hours_to_breach < 12:
+                        window_color = "#fbbf24"
+                        window_bg = "rgba(251,191,36,0.08)"
+                        urgency = "Schedule maintenance today"
+                    else:
+                        window_color = "#38bdf8"
+                        window_bg = "rgba(56,189,248,0.06)"
+                        urgency = "Monitor closely"
+
+                    hours_int = int(hours_to_breach)
+                    mins_int = int((hours_to_breach - hours_int) * 60)
+                    time_str = f"{hours_int}h {mins_int}m" if hours_int > 0 else f"{mins_int}m"
+
+                    st.markdown(f"""
+                    <div style="background:{window_bg};border:1px solid {window_color}44;border-radius:10px;padding:14px 18px;margin-top:8px">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <span style="font-size:13px;font-weight:500;color:{window_color};text-transform:uppercase;letter-spacing:0.08em">Predictive Maintenance Window</span>
+                        <span style="font-size:11px;color:#4a6a8a">{urgency}</span>
+                      </div>
+                      <div style="display:flex;gap:16px;flex-wrap:wrap">
+                        <div>
+                          <p style="font-size:11px;color:#5a8ab5;margin:0;text-transform:uppercase;letter-spacing:0.08em">Drift Rate</p>
+                          <p style="font-size:20px;font-weight:300;color:#e0e0f0;margin:4px 0 0">{drift_label} {unit}/hr</p>
+                        </div>
+                        <div>
+                          <p style="font-size:11px;color:#5a8ab5;margin:0;text-transform:uppercase;letter-spacing:0.08em">Current Value</p>
+                          <p style="font-size:20px;font-weight:300;color:#e0e0f0;margin:4px 0 0">{current_val:.2f} {unit}</p>
+                        </div>
+                        <div>
+                          <p style="font-size:11px;color:#5a8ab5;margin:0;text-transform:uppercase;letter-spacing:0.08em">Estimated Threshold Breach</p>
+                          <p style="font-size:20px;font-weight:300;color:{window_color};margin:4px 0 0">{time_str}</p>
+                        </div>
+                      </div>
+                      <p style="font-size:12px;color:#4a6a8a;margin:10px 0 0">At the current drift rate of {drift_label} {unit}/hr, {label} will cross its normal operating boundary in approximately {time_str}.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.markdown("""
                 <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px;padding:12px 18px;margin-top:8px">
