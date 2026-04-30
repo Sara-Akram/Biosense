@@ -70,34 +70,6 @@ st.markdown("""
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.5; transform: scale(1.15); }
     }
-    .biosense-diamond {
-        font-size: 2.2rem;
-        color: #a78bfa;
-        animation: diamondpulse 5s ease-in-out infinite;
-        display: inline-block;
-        margin-right: 8px;
-    }
-    .biosense-title {
-        font-size: 2.4rem !important;
-        font-weight: 500 !important;
-        letter-spacing: 0.02em;
-        background: linear-gradient(
-            90deg,
-            #ffffff 0%,
-            #ffffff 15%,
-            #38bdf8 30%,
-            #a78bfa 50%,
-            #38bdf8 70%,
-            #ffffff 85%,
-            #ffffff 100%
-        );
-        background-size: 400% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: shimmer 8s ease-in-out infinite;
-        display: inline-block;
-    }
     [data-testid="stToolbar"],
     [data-testid="stDecoration"],
     [data-testid="stStatusWidget"],
@@ -309,36 +281,46 @@ def dark_layout(height=280):
 # ── Header ───────────────────────────────────────────────────
 st.markdown("""
 <style>
-@keyframes shimmerwave{
-  0%{background-position:-400% center}
-  100%{background-position:400% center}
+@keyframes biosense-shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 400% center; }
 }
-@keyframes diamondglow{
-  0%,100%{filter:drop-shadow(0 0 3px rgba(56,189,248,0.3))}
-  45%{filter:drop-shadow(0 0 12px rgba(56,189,248,1)) drop-shadow(0 0 24px rgba(56,189,248,0.5))}
+@keyframes biosense-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
 }
-.biosense-diamond{
-  font-size:2rem;color:#38bdf8;
-  display:inline-block;
-  animation:diamondglow 4s ease-in-out infinite;
-  margin-right:8px;
+.bs-diamond {
+    font-size: 2.2rem;
+    color: #a78bfa;
+    display: inline-block;
+    margin-right: 10px;
+    animation: biosense-pulse 5s ease-in-out infinite;
 }
-.biosense-title{
-  font-size:2rem;font-weight:300;letter-spacing:0.02em;
-  background:linear-gradient(
-    90deg,
-    #e0e0f0 0%,#e0e0f0 10%,
-    #38bdf8 28%,#ccefff 35%,#ffffff 40%,#ccefff 45%,#38bdf8 52%,
-    #e0e0f0 65%,#e0e0f0 100%
-  );
-  background-size:400% auto;
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  animation:shimmerwave 4s ease-in-out infinite;
+.bs-title {
+    font-size: 2.4rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: linear-gradient(
+        90deg,
+        #e0e0f0 0%,
+        #e0e0f0 10%,
+        #38bdf8 28%,
+        #a78bfa 50%,
+        #38bdf8 72%,
+        #e0e0f0 90%,
+        #e0e0f0 100%
+    );
+    background-size: 400% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: biosense-shimmer 10s ease-in-out infinite;
+    display: inline-block;
 }
 </style>
-<div style="display:flex;align-items:center;margin-bottom:0">
-  <span class="biosense-diamond">◆</span>
-  <span class="biosense-title">BioSense</span>
+<div style="display:flex;align-items:center;margin-bottom:0;padding:4px 0">
+  <span class="bs-diamond">◆</span>
+  <span class="bs-title">BioSense</span>
 </div>
 """, unsafe_allow_html=True)
 st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
