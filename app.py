@@ -1053,7 +1053,7 @@ if df is not None and sensor_cols is not None:
                 ts_str = ev["timestamp"].strftime("%H:%M  %b %d") if hasattr(ev["timestamp"], "strftime") else str(ev["timestamp"])[:16]
                 return f"""
                 <div style='position:relative;padding:10px 0 10px 16px;border-bottom:1px solid rgba(56,138,221,0.07)'>
-                  <div style='position:absolute;left:-29px;top:16px;width:10px;height:10px;
+                  <div style='position:absolute;left:-25px;top:16px;width:10px;height:10px;
                     border-radius:50%;background:{dot_color};{glow}'></div>
                   <div style='font-size:11px;color:#4a6a8a;font-family:monospace;margin-bottom:3px'>{ts_str}</div>
                   <div style='font-size:13px;color:#c0d0e0;margin-bottom:3px;font-weight:500'>{ev['message']}</div>
@@ -1064,7 +1064,7 @@ if df is not None and sensor_cols is not None:
             events_html = ""
             for ev in timeline_events:
                 events_html += render_tl_event(ev)
-            all_html = f"<div style='overflow-y:auto;height:330px;margin-left:16px'><div style='position:relative;padding-left:24px;border-left:1px solid rgba(56,138,221,0.2)'>{events_html}</div></div>"
+            all_html = f"<div style='overflow-y:auto;overflow-x:visible;height:330px;padding-left:20px'><div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.2)'>{events_html}</div></div>"
             st.markdown(all_html, unsafe_allow_html=True)
         else:
             st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlation changes detected in this window</div>", unsafe_allow_html=True)
