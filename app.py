@@ -38,9 +38,70 @@ st.markdown("""
         [data-testid="collapsedControl"] {
             display: none !important;
         }
+
+        /* Full width, tight padding */
         .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            padding-top: 1rem !important;
+            max-width: 100% !important;
+        }
+
+        /* Stack all columns vertically */
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
+
+        /* Metric cards — single column on mobile */
+        [data-testid="stMetric"] {
+            margin-bottom: 8px !important;
+        }
+
+        /* Charts full width */
+        .stPlotlyChart {
+            width: 100% !important;
+        }
+
+        /* Tabs scroll horizontally on mobile */
+        .stTabs [data-baseweb="tab-list"] {
+            overflow-x: auto !important;
+            flex-wrap: nowrap !important;
+        }
+
+        /* Buttons full width on mobile */
+        .stButton button {
+            width: 100% !important;
+            margin-bottom: 8px !important;
+        }
+
+        /* Reduce font sizes on mobile */
+        .bs-title {
+            font-size: 1.8rem !important;
+        }
+        .bs-diamond {
+            font-size: 1.8rem !important;
+        }
+
+        /* Expander full width */
+        [data-testid="stExpander"] {
+            width: 100% !important;
+        }
+
+        /* Hide Plotly toolbar on mobile — takes too much space */
+        .modebar {
+            display: none !important;
+        }
+
+        /* Correlation section stack vertically */
+        [data-testid="stHorizontalBlock"] {
+            flex-direction: column !important;
+        }
+
+        /* Dataframe scroll horizontally */
+        [data-testid="stDataFrame"] {
+            overflow-x: auto !important;
         }
     }
     .block-container {
@@ -635,7 +696,9 @@ if df is not None and sensor_cols is not None:
                 st.toast(f"📧 {sent_ok} alert email(s) sent to {alert_email}", icon="✅")
 
     # ── Metric cards ─────────────────────────────────────────
-    metric_cols = st.columns(min(len(sensor_cols) + 1, 4))
+    # Responsive metric cards — show all sensors
+    num_metrics = min(len(sensor_cols), 3) + 1
+    metric_cols = st.columns(min(num_metrics, 4))
     latest = df.iloc[-1]
 
     sensor_labels = {
