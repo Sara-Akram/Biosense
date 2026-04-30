@@ -1060,8 +1060,8 @@ if df is not None and sensor_cols is not None:
                   <div style='font-size:12px;color:#5a7a8f;line-height:1.4'>{ev['why']}</div>
                 </div>"""
 
-            # Show all events in one continuous timeline — page scrolls naturally
-            all_html = "<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.15)'>"
+            # Fixed window showing 3 events — scroll to see older ones
+            all_html = "<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.15);height:420px;overflow-y:auto;padding-right:8px'>"
             for ev in timeline_events:
                 all_html += render_tl_event(ev)
             all_html += "</div>"
