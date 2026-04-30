@@ -316,9 +316,9 @@ st.markdown("""
 
 
 # ── Chart theme (dark) ───────────────────────────────────────
-CHART_BG = "#f8f9fc" if st.session_state.get("theme") == "light" else "#0a0a0f"
-CHART_GRID = "rgba(0,0,0,0.06)" if st.session_state.get("theme") == "light" else "rgba(255,255,255,0.04)"
-CHART_TEXT = "#4a6a8a" if st.session_state.get("theme") == "light" else "#4a7a9f"
+CHART_BG = "#f8f9fc" if is_light else "#0a0a0f"
+CHART_GRID = "rgba(0,0,0,0.06)" if is_light else "rgba(255,255,255,0.04)"
+CHART_TEXT = "#4a6a8a" if is_light else "#4a7a9f"
 CHART_COLORS = ["#38bdf8", "#06b6d4", "#0ea5e9", "#67e8f9", "#22d3ee", "#7dd3fc"]
 ANOMALY_COLOR = "#ef4444"
 NORMAL_BAND = "rgba(56,189,248,0.05)"
@@ -449,53 +449,122 @@ with st.sidebar:
                 "</div>", unsafe_allow_html=True)
 
 
-# ── Data source toggle ────────────────────────────────────────
-col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
+# ── Theme state ───────────────────────────────────────────────
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+is_light = st.session_state.get("theme") == "light"
+
+# ── Theme toggle — small icon top right ──────────────────────
+st.markdown("""
+<style>
+.theme-toggle-wrap {
+    position: fixed;
+    top: 14px;
+    right: 60px;
+    z-index: 9999;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Data source toggle + theme button ─────────────────────────
+col_toggle1, col_toggle2, col_spacer, col_theme = st.columns([1, 1, 1.5, 0.5])
 with col_toggle1:
     if st.button("📊 Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
     if st.button("📁 Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
-with col_toggle3:
-    col_empty, col_theme = st.columns([2, 1])
-    with col_theme:
-        if "theme" not in st.session_state:
-            st.session_state.theme = "dark"
-        theme_label = "☀️ Light" if st.session_state.theme == "dark" else "🌙 Dark"
-        if st.button(theme_label, use_container_width=True):
-            st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
-            st.rerun()
+with col_theme:
+    icon = "🌙" if is_light else "☀️"
+    if st.button(icon, use_container_width=True, help="Toggle light/dark mode"):
+        st.session_state.theme = "light" if not is_light else "dark"
+        st.rerun()
 
-# Apply theme
-if st.session_state.get("theme", "dark") == "light":
+# ── Apply light mode CSS ──────────────────────────────────────
+if is_light:
     st.markdown("""
     <style>
+        /* Light background */
         .stApp, .main, [data-testid="stAppViewContainer"],
         [data-testid="stHeader"] {
-            background-color: #f8f9fc !important;
+            background-color: #f0f2f8 !important;
         }
-        .block-container { background-color: #f8f9fc !important; }
+        .block-container { background-color: #f0f2f8 !important; }
+
+        /* Text */
         h1, h2, h3, p, span, label, div { color: #1a1a2e !important; }
+
+        /* Apple glass metric cards */
         [data-testid="stMetric"] {
-            background: linear-gradient(145deg, rgba(240,245,255,0.8), rgba(230,238,255,0.9)) !important;
-            border: 1px solid rgba(56,138,221,0.2) !important;
+            background: rgba(255,255,255,0.6) !important;
+            border: 1px solid rgba(255,255,255,0.8) !important;
+            border-radius: 16px !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
         }
-        [data-testid="stMetricLabel"] p { color: #3a6a9f !important; }
+        [data-testid="stMetricLabel"] p { color: #5a7a9f !important; }
         [data-testid="stMetricValue"] div { color: #1a1a2e !important; }
-        [data-testid="stSidebar"] { background-color: #eef2f9 !important; }
-        [data-testid="stExpander"] { background: #eef2f9 !important; border: 1px solid #d0daea !important; }
-        .stTabs [data-baseweb="tab"] { color: #4a6a8a !important; }
+        [data-testid="stMetricDelta"] div { color: #1a6098 !important; }
+
+        /* Glass expander */
+        [data-testid="stExpander"] {
+            background: rgba(255,255,255,0.5) !important;
+            border: 1px solid rgba(255,255,255,0.7) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border-radius: 12px !important;
+        }
+
+        /* Sidebar light */
+        [data-testid="stSidebar"] {
+            background-color: rgba(240,242,248,0.9) !important;
+            border-right: 1px solid rgba(0,0,0,0.08) !important;
+        }
+        [data-testid="stSidebar"] * { color: #3a5a7a !important; }
+
+        /* Tabs */
+        .stTabs [data-baseweb="tab"] { color: #5a7a9f !important; }
         .stTabs [aria-selected="true"] { color: #1a6098 !important; }
         .stTabs [data-baseweb="tab-highlight"] { background-color: #1a6098 !important; }
-        .bs-title {
-            background: linear-gradient(90deg, #1a1a2e 0%, #1a1a2e 10%, #1a6098 28%, #6a3ab7 50%, #1a6098 72%, #1a1a2e 90%, #1a1a2e 100%) !important;
-            background-size: 400% auto !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            background-clip: text !important;
+        .stTabs [data-baseweb="tab-list"] {
+            border-bottom: 1px solid rgba(0,0,0,0.1) !important;
         }
+
+        /* Section headers */
+        [data-testid="stSubheader"] h2,
+        [data-testid="stSubheader"] p,
+        .stSubheader {
+            color: #3a6a9f !important;
+        }
+
+        /* Logo shimmer adapt */
         .bs-diamond { color: #6a3ab7 !important; }
+
+        /* File uploader */
+        [data-testid="stFileUploader"] {
+            background: rgba(255,255,255,0.5) !important;
+            border: 1px dashed rgba(26,96,152,0.3) !important;
+        }
+
+        /* Download button */
+        .stDownloadButton button {
+            color: #1a6098 !important;
+            border-color: rgba(26,96,152,0.3) !important;
+        }
+
+        /* Caption */
+        [data-testid="stCaption"] p, .stCaption p {
+            color: #7a9ab5 !important;
+        }
+
+        /* Dataframe */
+        [data-testid="stDataFrame"] {
+            background: rgba(255,255,255,0.6) !important;
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            border-radius: 10px !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
