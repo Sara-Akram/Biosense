@@ -607,20 +607,39 @@ if df is not None and sensor_cols is not None:
     # ── Sensor charts ────────────────────────────────────────
     st.subheader("Sensor Readings")
 
-    # Clean labels and distinct colors per sensor
+    # Clean labels and distinct colors per sensor — covers all ATEK/PolySense parameters
     sensor_display = {
+        # Bioreactor / incubator
         "temperature_c": {"label": "Temperature", "unit": "°C", "color": "#38bdf8", "band_fill": "rgba(56,189,248,0.15)", "band_border": "rgba(56,189,248,0.4)"},
         "ph": {"label": "pH", "unit": "", "color": "#34d399", "band_fill": "rgba(52,211,153,0.15)", "band_border": "rgba(52,211,153,0.4)"},
         "dissolved_oxygen_pct": {"label": "Dissolved O₂", "unit": "%", "color": "#fbbf24", "band_fill": "rgba(251,191,36,0.15)", "band_border": "rgba(251,191,36,0.4)"},
+        # ATEK standard parameters
+        "Temperature_C": {"label": "Temperature", "unit": "°C", "color": "#38bdf8", "band_fill": "rgba(56,189,248,0.15)", "band_border": "rgba(56,189,248,0.4)"},
+        "Relative_Humidity_pct": {"label": "Humidity", "unit": "%RH", "color": "#34d399", "band_fill": "rgba(52,211,153,0.15)", "band_border": "rgba(52,211,153,0.4)"},
+        "Pressure_kPa": {"label": "Pressure", "unit": "kPa", "color": "#fbbf24", "band_fill": "rgba(251,191,36,0.15)", "band_border": "rgba(251,191,36,0.4)"},
+        "CO2_ppm": {"label": "CO₂", "unit": "ppm", "color": "#f472b6", "band_fill": "rgba(244,114,182,0.15)", "band_border": "rgba(244,114,182,0.4)"},
+        "O2_pct": {"label": "O₂", "unit": "%", "color": "#a78bfa", "band_fill": "rgba(167,139,250,0.15)", "band_border": "rgba(167,139,250,0.4)"},
+        "Differential_Pressure_Pa": {"label": "Differential Pressure", "unit": "Pa", "color": "#fb923c", "band_fill": "rgba(251,146,60,0.15)", "band_border": "rgba(251,146,60,0.4)"},
+        "LN2_level_pct": {"label": "LN₂ Level", "unit": "%", "color": "#22d3ee", "band_fill": "rgba(34,211,238,0.15)", "band_border": "rgba(34,211,238,0.4)"},
+        "TVOC_ppb": {"label": "TVOC", "unit": "ppb", "color": "#e879f9", "band_fill": "rgba(232,121,249,0.15)", "band_border": "rgba(232,121,249,0.4)"},
+        "CH4_ppm": {"label": "Methane (CH₄)", "unit": "ppm", "color": "#4ade80", "band_fill": "rgba(74,222,128,0.15)", "band_border": "rgba(74,222,128,0.4)"},
+        "NH3_ppm": {"label": "Ammonia (NH₃)", "unit": "ppm", "color": "#facc15", "band_fill": "rgba(250,204,21,0.15)", "band_border": "rgba(250,204,21,0.4)"},
+        # Generic fallbacks for case-insensitive matching
+        "temperature": {"label": "Temperature", "unit": "°C", "color": "#38bdf8", "band_fill": "rgba(56,189,248,0.15)", "band_border": "rgba(56,189,248,0.4)"},
+        "humidity": {"label": "Humidity", "unit": "%RH", "color": "#34d399", "band_fill": "rgba(52,211,153,0.15)", "band_border": "rgba(52,211,153,0.4)"},
+        "pressure": {"label": "Pressure", "unit": "kPa", "color": "#fbbf24", "band_fill": "rgba(251,191,36,0.15)", "band_border": "rgba(251,191,36,0.4)"},
+        "co2": {"label": "CO₂", "unit": "ppm", "color": "#f472b6", "band_fill": "rgba(244,114,182,0.15)", "band_border": "rgba(244,114,182,0.4)"},
+        "o2": {"label": "O₂", "unit": "%", "color": "#a78bfa", "band_fill": "rgba(167,139,250,0.15)", "band_border": "rgba(167,139,250,0.4)"},
     }
 
-    # Fallback colors for uploaded CSV columns
+    # Fallback colors for any columns not in sensor_display
     fallback_colors = [
         {"color": "#38bdf8", "band_fill": "rgba(56,189,248,0.15)", "band_border": "rgba(56,189,248,0.4)"},
         {"color": "#34d399", "band_fill": "rgba(52,211,153,0.15)", "band_border": "rgba(52,211,153,0.4)"},
         {"color": "#fbbf24", "band_fill": "rgba(251,191,36,0.15)", "band_border": "rgba(251,191,36,0.4)"},
         {"color": "#f472b6", "band_fill": "rgba(244,114,182,0.15)", "band_border": "rgba(244,114,182,0.4)"},
         {"color": "#a78bfa", "band_fill": "rgba(167,139,250,0.15)", "band_border": "rgba(167,139,250,0.4)"},
+        {"color": "#fb923c", "band_fill": "rgba(251,146,60,0.15)", "band_border": "rgba(251,146,60,0.4)"},
     ]
 
     # Build clean tab names
