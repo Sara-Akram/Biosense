@@ -316,7 +316,13 @@ st.markdown("""
 
 
 # ── Chart theme (dark) ───────────────────────────────────────
-CHART_BG = "#f8f9fc" if is_light else "#0a0a0f"
+# ── Theme state (must be before CHART_BG) ────────────────────
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+is_light = st.session_state.get("theme") == "light"
+
+# ── Chart theme ───────────────────────────────────────────────
+CHART_BG = "#f2f4f8" if is_light else "#0a0a0f"
 CHART_GRID = "rgba(0,0,0,0.06)" if is_light else "rgba(255,255,255,0.04)"
 CHART_TEXT = "#4a6a8a" if is_light else "#4a7a9f"
 CHART_COLORS = ["#38bdf8", "#06b6d4", "#0ea5e9", "#67e8f9", "#22d3ee", "#7dd3fc"]
@@ -450,24 +456,7 @@ with st.sidebar:
 
 
 # ── Theme state ───────────────────────────────────────────────
-if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
-
-is_light = st.session_state.get("theme") == "light"
-
-# ── Theme toggle — small icon top right ──────────────────────
-st.markdown("""
-<style>
-.theme-toggle-wrap {
-    position: fixed;
-    top: 14px;
-    right: 60px;
-    z-index: 9999;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ── Data source toggle + theme button ─────────────────────────
+if "data_source" not in st.session_state:
 col_toggle1, col_toggle2, col_spacer, col_theme = st.columns([1, 1, 1.5, 0.5])
 with col_toggle1:
     if st.button("📊 Simulated Demo", use_container_width=True):
@@ -485,85 +474,95 @@ with col_theme:
 if is_light:
     st.markdown("""
     <style>
-        /* Light background */
+        /* Light grey background */
         .stApp, .main, [data-testid="stAppViewContainer"],
         [data-testid="stHeader"] {
-            background-color: #f0f2f8 !important;
+            background-color: #f0f2f7 !important;
         }
-        .block-container { background-color: #f0f2f8 !important; }
+        .block-container { background-color: #f0f2f7 !important; }
 
         /* Text */
         h1, h2, h3, p, span, label, div { color: #1a1a2e !important; }
 
         /* Apple glass metric cards */
         [data-testid="stMetric"] {
-            background: rgba(255,255,255,0.6) !important;
-            border: 1px solid rgba(255,255,255,0.8) !important;
+            background: rgba(255,255,255,0.55) !important;
+            border: 1px solid rgba(255,255,255,0.85) !important;
             border-radius: 16px !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04),
+                        inset 0 1px 0 rgba(255,255,255,0.9) !important;
         }
         [data-testid="stMetricLabel"] p { color: #5a7a9f !important; }
         [data-testid="stMetricValue"] div { color: #1a1a2e !important; }
         [data-testid="stMetricDelta"] div { color: #1a6098 !important; }
 
+        /* Glass tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            background: rgba(255,255,255,0.4) !important;
+            border-radius: 12px !important;
+            padding: 4px !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255,255,255,0.7) !important;
+            gap: 2px !important;
+        }
+        .stTabs [data-baseweb="tab"] {
+            color: #5a7a9f !important;
+            border-radius: 8px !important;
+        }
+        .stTabs [aria-selected="true"] {
+            color: #1a6098 !important;
+            background: rgba(255,255,255,0.8) !important;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.08) !important;
+        }
+        .stTabs [data-baseweb="tab-highlight"] {
+            display: none !important;
+        }
+        .stTabs [data-baseweb="tab-border"] {
+            display: none !important;
+        }
+
         /* Glass expander */
         [data-testid="stExpander"] {
             background: rgba(255,255,255,0.5) !important;
-            border: 1px solid rgba(255,255,255,0.7) !important;
+            border: 1px solid rgba(255,255,255,0.75) !important;
             backdrop-filter: blur(16px) !important;
             -webkit-backdrop-filter: blur(16px) !important;
             border-radius: 12px !important;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05) !important;
         }
 
-        /* Sidebar light */
+        /* Sidebar */
         [data-testid="stSidebar"] {
-            background-color: rgba(240,242,248,0.9) !important;
-            border-right: 1px solid rgba(0,0,0,0.08) !important;
+            background-color: rgba(235,238,248,0.85) !important;
+            border-right: 1px solid rgba(0,0,0,0.07) !important;
+            backdrop-filter: blur(20px) !important;
         }
         [data-testid="stSidebar"] * { color: #3a5a7a !important; }
 
-        /* Tabs */
-        .stTabs [data-baseweb="tab"] { color: #5a7a9f !important; }
-        .stTabs [aria-selected="true"] { color: #1a6098 !important; }
-        .stTabs [data-baseweb="tab-highlight"] { background-color: #1a6098 !important; }
-        .stTabs [data-baseweb="tab-list"] {
-            border-bottom: 1px solid rgba(0,0,0,0.1) !important;
-        }
-
         /* Section headers */
         [data-testid="stSubheader"] h2,
-        [data-testid="stSubheader"] p,
-        .stSubheader {
-            color: #3a6a9f !important;
-        }
+        [data-testid="stSubheader"] p { color: #3a6a9f !important; }
 
-        /* Logo shimmer adapt */
+        /* Logo */
         .bs-diamond { color: #6a3ab7 !important; }
 
-        /* File uploader */
-        [data-testid="stFileUploader"] {
-            background: rgba(255,255,255,0.5) !important;
-            border: 1px dashed rgba(26,96,152,0.3) !important;
+        /* Caption */
+        [data-testid="stCaption"] p, .stCaption p { color: #7a9ab5 !important; }
+
+        /* Dataframe */
+        [data-testid="stDataFrame"] {
+            background: rgba(255,255,255,0.6) !important;
+            border: 1px solid rgba(0,0,0,0.06) !important;
+            border-radius: 10px !important;
         }
 
         /* Download button */
         .stDownloadButton button {
             color: #1a6098 !important;
             border-color: rgba(26,96,152,0.3) !important;
-        }
-
-        /* Caption */
-        [data-testid="stCaption"] p, .stCaption p {
-            color: #7a9ab5 !important;
-        }
-
-        /* Dataframe */
-        [data-testid="stDataFrame"] {
-            background: rgba(255,255,255,0.6) !important;
-            border: 1px solid rgba(0,0,0,0.08) !important;
-            border-radius: 10px !important;
         }
     </style>
     """, unsafe_allow_html=True)
