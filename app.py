@@ -433,7 +433,7 @@ with st.expander("Analysis Parameters", expanded=False):
     if data_source == "Simulated demo data":
         hours = st.slider("Monitoring Window (Hours)", 6, 48, 24)
 
-with st.expander("📧 Alert Settings", expanded=False):
+with st.expander("Alert Settings", expanded=False):
     alerts_enabled = st.toggle("Enable email alerts", value=False)
     if alerts_enabled:
         col_a1, col_a2 = st.columns(2)
