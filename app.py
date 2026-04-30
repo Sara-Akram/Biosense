@@ -1060,9 +1060,9 @@ if df is not None and sensor_cols is not None:
                   <div style='font-size:12px;color:#5a7a8f;line-height:1.4'>{ev['why']}</div>
                 </div>"""
 
-            # Show latest 8 events — no inner scroll, page scrolls naturally
+            # Show latest 3 events only
             events_html = ""
-            for ev in timeline_events[:8]:
+            for ev in timeline_events[:3]:
                 events_html += render_tl_event(ev)
             all_html = f"<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.2)'>{events_html}</div>"
             st.markdown(all_html, unsafe_allow_html=True)
