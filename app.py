@@ -379,7 +379,7 @@ sensor_cols = None
 
 if data_source == "Upload CSV":
     st.subheader("Upload Data")
-    st.markdown("<p style='color:#6060a0;font-size:14px'>CSV with a timestamp column and 2+ numeric sensor columns</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#6060a0;font-size:14px'>Upload one or multiple CSV files — one per device. BioSense will compare them side by side.</p>", unsafe_allow_html=True)
 
     with st.expander("Example CSV format"):
         example = pd.DataFrame({
@@ -390,39 +390,137 @@ if data_source == "Upload CSV":
         })
         st.dataframe(example, use_container_width=True)
 
-    uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"], label_visibility="collapsed")
+    uploaded_files = st.file_uploader(
+        "Upload your CSV file(s)",
+        type=["csv"],
+        accept_multiple_files=True,
+        label_visibility="collapsed"
+    )
 
-    if uploaded_file is not None:
-        try:
-            raw_df = pd.read_csv(uploaded_file)
-            st.success(f"{len(raw_df)} rows loaded")
+    if uploaded_files:
+        # Process each file into a separate dataframe
+        all_equipment = {}
 
-            all_cols = list(raw_df.columns)
-            timestamp_col = st.selectbox("Timestamp column", all_cols, index=0)
+        for uploaded_file in uploaded_files:
+            try:
+                raw_df = pd.read_csv(uploaded_file)
+                device_name = uploaded_file.name.replace(".csv", "").replace("_", " ").title()
 
-            numeric_candidates = [
-                c for c in all_cols
-                if c != timestamp_col and pd.to_numeric(raw_df[c], errors='coerce').notna().mean() > 0.8
-            ]
+                all_cols = list(raw_df.columns)
 
-            selected_sensors = st.multiselect(
-                "Sensor columns (select 2+)",
-                numeric_candidates if numeric_candidates else [c for c in all_cols if c != timestamp_col],
-                default=numeric_candidates[:3] if len(numeric_candidates) >= 2 else [],
+                # Auto-detect timestamp column
+                ts_col = next((c for c in all_cols if "time" in c.lower() or "date" in c.lower()), all_cols[0])
+
+                # Auto-detect numeric sensor columns
+                numeric_candidates = [
+                    c for c in all_cols
+                    if c != ts_col and pd.to_numeric(raw_df[c], errors='coerce').notna().mean() > 0.8
+                ]
+
+                if len(numeric_candidates) >= 2:
+                    eq_df = raw_df[[ts_col] + numeric_candidates].copy()
+                    eq_df.columns = ["timestamp"] + numeric_candidates
+                    eq_df["timestamp"] = pd.to_datetime(eq_df["timestamp"], errors="coerce")
+                    for col in numeric_candidates:
+                        eq_df[col] = pd.to_numeric(eq_df[col], errors="coerce")
+                    eq_df = eq_df.dropna().sort_values("timestamp").reset_index(drop=True)
+                    all_equipment[device_name] = {"df": eq_df, "sensors": numeric_candidates}
+
+            except Exception as e:
+                st.error(f"Could not read {uploaded_file.name}: {e}")
+
+        if len(all_equipment) > 1:
+            # ── Multi-equipment comparison ────────────────────
+            st.subheader("Equipment Health Overview")
+
+            # Run ML on each device and compute health score
+            from sklearn.ensemble import IsolationForest as IF
+
+            health_scores = {}
+            for device_name, eq_data in all_equipment.items():
+                eq_df = eq_data["df"]
+                eq_sensors = eq_data["sensors"]
+                features = eq_df[eq_sensors].values
+                model = IF(contamination=sensitivity, random_state=42, n_estimators=100)
+                preds = model.fit_predict(features)
+                scores = model.decision_function(features)
+                anomaly_pct = (preds == -1).mean()
+                # Health score: 100 = perfect, 0 = all anomalies
+                health = max(0, min(100, int(100 - anomaly_pct * 300)))
+                anom_count = int((preds == -1).sum())
+                health_scores[device_name] = {
+                    "health": health,
+                    "anomalies": anom_count,
+                    "total": len(eq_df),
+                    "df": eq_df,
+                    "sensors": eq_sensors,
+                    "preds": preds,
+                    "scores": scores,
+                }
+
+            # Show health score cards
+            cols = st.columns(len(health_scores))
+            for idx, (device_name, data) in enumerate(health_scores.items()):
+                h = data["health"]
+                if h >= 80:
+                    color = "#34d399"
+                    status = "Healthy"
+                elif h >= 50:
+                    color = "#fbbf24"
+                    status = "Watch"
+                else:
+                    color = "#ef4444"
+                    status = "Critical"
+
+                with cols[idx]:
+                    st.markdown(f"""
+                    <div style="background:linear-gradient(145deg,rgba(30,40,60,0.5),rgba(20,28,45,0.7));
+                        border:1px solid {color}44;border-radius:12px;padding:16px;text-align:center;
+                        border-top:3px solid {color}">
+                      <p style="font-size:12px;color:#5a8ab5;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px">{device_name}</p>
+                      <p style="font-size:36px;font-weight:300;color:#ffffff;margin:0">{h}</p>
+                      <p style="font-size:13px;color:{color};margin:4px 0 8px">{status}</p>
+                      <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-bottom:8px">
+                        <div style="width:{h}%;height:100%;background:{color};border-radius:2px"></div>
+                      </div>
+                      <p style="font-size:12px;color:#4a6a8a;margin:0">{data['anomalies']} anomalies · {data['total']} readings</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
+
+            # Let user select which device to drill into
+            selected_device = st.selectbox(
+                "View detailed analysis for:",
+                list(health_scores.keys())
             )
 
+            # Use selected device for the rest of the dashboard
+            sel = health_scores[selected_device]
+            df = sel["df"]
+            sensor_cols = sel["sensors"]
+
+        elif len(all_equipment) == 1:
+            # Single file — use column selector as before
+            device_name = list(all_equipment.keys())[0]
+            eq_data = all_equipment[device_name]
+            df = eq_data["df"]
+            sensor_cols = eq_data["sensors"]
+
+            # Allow user to refine sensor selection
+            selected_sensors = st.multiselect(
+                "Sensor columns (select 2+)",
+                sensor_cols,
+                default=sensor_cols[:3] if len(sensor_cols) >= 2 else sensor_cols,
+            )
             if len(selected_sensors) >= 2:
-                df = raw_df[[timestamp_col] + selected_sensors].copy()
-                df.columns = ["timestamp"] + selected_sensors
-                df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-                for col in selected_sensors:
-                    df[col] = pd.to_numeric(df[col], errors="coerce")
-                df = df.dropna().sort_values("timestamp").reset_index(drop=True)
                 sensor_cols = selected_sensors
             elif len(selected_sensors) == 1:
                 st.warning("Select at least 2 sensor columns")
-        except Exception as e:
-            st.error(f"Could not read file: {e}")
+                sensor_cols = None
+        else:
+            df = None
+            sensor_cols = None
 
 else:
     @st.cache_data
