@@ -1053,18 +1053,21 @@ if df is not None and sensor_cols is not None:
                 ts_str = ev["timestamp"].strftime("%H:%M  %b %d") if hasattr(ev["timestamp"], "strftime") else str(ev["timestamp"])[:16]
                 return f"""
                 <div style='position:relative;padding:10px 0 10px 16px;border-bottom:1px solid rgba(56,138,221,0.07)'>
-                  <div style='position:absolute;left:-33px;top:16px;width:10px;height:10px;
-                    border-radius:50%;background:{dot_color};{glow};flex-shrink:0'></div>
+                  <div style='position:absolute;left:-29px;top:16px;width:10px;height:10px;
+                    border-radius:50%;background:{dot_color};{glow}'></div>
                   <div style='font-size:11px;color:#4a6a8a;font-family:monospace;margin-bottom:3px'>{ts_str}</div>
                   <div style='font-size:13px;color:#c0d0e0;margin-bottom:3px;font-weight:500'>{ev['message']}</div>
                   <div style='font-size:12px;color:#5a7a8f;line-height:1.4'>{ev['why']}</div>
                 </div>"""
 
-            # Fixed window showing 3 events — scroll to see older ones
-            all_html = "<div style='position:relative;padding-left:28px;border-left:1px solid rgba(56,138,221,0.15);height:420px;overflow-y:auto;padding-right:8px;overflow-x:visible'>"
+            # Fixed window showing exactly 3 events — scroll inside to see older ones
+            all_html = """
+<div style='overflow-y:auto;height:330px;margin-left:16px'>
+  <div style='position:relative;padding-left:24px;border-left:1px solid rgba(56,138,221,0.2)'>
+"""
             for ev in timeline_events:
                 all_html += render_tl_event(ev)
-            all_html += "</div>"
+            all_html += "</div></div>"
             st.markdown(all_html, unsafe_allow_html=True)
         else:
             st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlation changes detected in this window</div>", unsafe_allow_html=True)
