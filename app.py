@@ -1060,21 +1060,12 @@ if df is not None and sensor_cols is not None:
                   <div style='font-size:12px;color:#5a7a8f;line-height:1.4'>{ev['why']}</div>
                 </div>"""
 
-            # Show latest 3 pinned at the top
-            pinned_html = "<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.15)'>"
-            for ev in timeline_events[:3]:
-                pinned_html += render_tl_event(ev)
-            pinned_html += "</div>"
-            st.markdown(pinned_html, unsafe_allow_html=True)
-
-            # Remaining events in a scrollable box
-            if len(timeline_events) > 3:
-                scroll_html = "<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.1);max-height:260px;overflow-y:auto;margin-top:4px;padding-right:4px'>"
-                for ev in timeline_events[3:]:
-                    scroll_html += render_tl_event(ev)
-                scroll_html += "</div>"
-                
-                st.markdown(scroll_html, unsafe_allow_html=True)
+            # Show all events in one continuous timeline — page scrolls naturally
+            all_html = "<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.15)'>"
+            for ev in timeline_events:
+                all_html += render_tl_event(ev)
+            all_html += "</div>"
+            st.markdown(all_html, unsafe_allow_html=True)
         else:
             st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlation changes detected in this window</div>", unsafe_allow_html=True)
 
