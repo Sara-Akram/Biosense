@@ -63,36 +63,39 @@ st.markdown("""
 
     /* BioSense logo shimmer animation */
     @keyframes shimmer {
-        0% { background-position: -300% center; }
-        100% { background-position: 300% center; }
+        0% { background-position: 0% center; }
+        100% { background-position: 400% center; }
     }
     @keyframes diamondpulse {
         0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(1.12); }
+        50% { opacity: 0.5; transform: scale(1.15); }
     }
     .biosense-diamond {
         font-size: 2.2rem;
-        color: #38bdf8;
-        animation: diamondpulse 4s ease-in-out infinite;
+        color: #a78bfa;
+        animation: diamondpulse 5s ease-in-out infinite;
         display: inline-block;
+        margin-right: 8px;
     }
     .biosense-title {
         font-size: 2.4rem !important;
         font-weight: 500 !important;
         letter-spacing: 0.02em;
-        background: linear-gradient(90deg,
-            #e0e0f0 0%,
-            #e0e0f0 20%,
-            #38bdf8 40%,
-            #a78bfa 55%,
-            #e0e0f0 75%,
-            #e0e0f0 100%
+        background: linear-gradient(
+            90deg,
+            #ffffff 0%,
+            #ffffff 15%,
+            #38bdf8 30%,
+            #a78bfa 50%,
+            #38bdf8 70%,
+            #ffffff 85%,
+            #ffffff 100%
         );
-        background-size: 300% auto;
+        background-size: 400% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        animation: shimmer 6s ease-in-out infinite;
+        animation: shimmer 8s ease-in-out infinite;
         display: inline-block;
     }
     [data-testid="stToolbar"],
