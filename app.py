@@ -316,9 +316,9 @@ st.markdown("""
 
 
 # ── Chart theme (dark) ───────────────────────────────────────
-CHART_BG = "#0a0a0f"
-CHART_GRID = "rgba(255,255,255,0.04)"
-CHART_TEXT = "#4a7a9f"
+CHART_BG = "#f8f9fc" if st.session_state.get("theme") == "light" else "#0a0a0f"
+CHART_GRID = "rgba(0,0,0,0.06)" if st.session_state.get("theme") == "light" else "rgba(255,255,255,0.04)"
+CHART_TEXT = "#4a6a8a" if st.session_state.get("theme") == "light" else "#4a7a9f"
 CHART_COLORS = ["#38bdf8", "#06b6d4", "#0ea5e9", "#67e8f9", "#22d3ee", "#7dd3fc"]
 ANOMALY_COLOR = "#ef4444"
 NORMAL_BAND = "rgba(56,189,248,0.05)"
@@ -457,6 +457,47 @@ with col_toggle1:
 with col_toggle2:
     if st.button("📁 Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
+with col_toggle3:
+    col_empty, col_theme = st.columns([2, 1])
+    with col_theme:
+        if "theme" not in st.session_state:
+            st.session_state.theme = "dark"
+        theme_label = "☀️ Light" if st.session_state.theme == "dark" else "🌙 Dark"
+        if st.button(theme_label, use_container_width=True):
+            st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+            st.rerun()
+
+# Apply theme
+if st.session_state.get("theme", "dark") == "light":
+    st.markdown("""
+    <style>
+        .stApp, .main, [data-testid="stAppViewContainer"],
+        [data-testid="stHeader"] {
+            background-color: #f8f9fc !important;
+        }
+        .block-container { background-color: #f8f9fc !important; }
+        h1, h2, h3, p, span, label, div { color: #1a1a2e !important; }
+        [data-testid="stMetric"] {
+            background: linear-gradient(145deg, rgba(240,245,255,0.8), rgba(230,238,255,0.9)) !important;
+            border: 1px solid rgba(56,138,221,0.2) !important;
+        }
+        [data-testid="stMetricLabel"] p { color: #3a6a9f !important; }
+        [data-testid="stMetricValue"] div { color: #1a1a2e !important; }
+        [data-testid="stSidebar"] { background-color: #eef2f9 !important; }
+        [data-testid="stExpander"] { background: #eef2f9 !important; border: 1px solid #d0daea !important; }
+        .stTabs [data-baseweb="tab"] { color: #4a6a8a !important; }
+        .stTabs [aria-selected="true"] { color: #1a6098 !important; }
+        .stTabs [data-baseweb="tab-highlight"] { background-color: #1a6098 !important; }
+        .bs-title {
+            background: linear-gradient(90deg, #1a1a2e 0%, #1a1a2e 10%, #1a6098 28%, #6a3ab7 50%, #1a6098 72%, #1a1a2e 90%, #1a1a2e 100%) !important;
+            background-size: 400% auto !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+        .bs-diamond { color: #6a3ab7 !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
 if "data_source" not in st.session_state:
     st.session_state.data_source = "Simulated demo data"
