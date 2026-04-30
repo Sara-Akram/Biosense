@@ -61,7 +61,39 @@ st.markdown("""
         color: #e0e0f0 !important;
     }
 
-    /* Hide Streamlit developer toolbar/menu */
+    /* BioSense logo shimmer animation */
+    @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+    }
+    @keyframes diamondspin {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .biosense-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 0;
+    }
+    .biosense-diamond {
+        font-size: 2.2rem;
+        color: #38bdf8;
+        animation: diamondspin 3s ease-in-out infinite;
+        display: inline-block;
+    }
+    .biosense-title {
+        font-size: 2.4rem !important;
+        font-weight: 500 !important;
+        letter-spacing: 0.02em;
+        background: linear-gradient(90deg, #e0e0f0 0%, #38bdf8 35%, #a78bfa 55%, #e0e0f0 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: shimmer 3.5s linear infinite;
+        display: inline-block;
+    }
     [data-testid="stToolbar"],
     [data-testid="stDecoration"],
     [data-testid="stStatusWidget"],
