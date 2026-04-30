@@ -599,7 +599,54 @@ if df is not None and sensor_cols is not None:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-    # ── ML anomaly score ─────────────────────────────────────
+            # ── Explanation card ──────────────────────────────
+            anom_count = int(df["detected_anomaly"].sum())
+            if anom_count > 0 and "anomaly_score" in df.columns:
+                from explainer import generate_explanation, detect_anomaly_type, find_primary_sensor, anomaly_score_to_confidence
+
+                anom_mask = df["detected_anomaly"] == 1
+                anom_indices = list(df.index[anom_mask])
+                worst_score = df.loc[anom_mask, "anomaly_score"].min() if len(anom_indices) > 0 else 0.0
+
+                exp = generate_explanation(
+                    df=df,
+                    sensor_cols=sensor_cols,
+                    sensor_display=sensor_display,
+                    anomaly_score=worst_score,
+                    anomaly_indices=anom_indices,
+                )
+
+                confidence = exp["confidence"]
+                sev = exp["severity"]
+                sev_color = {"critical": "#ef4444", "warning": "#fbbf24", "info": "#38bdf8"}.get(sev, "#38bdf8")
+                sev_bg = {"critical": "rgba(239,68,68,0.08)", "warning": "rgba(251,191,36,0.08)", "info": "rgba(56,189,248,0.06)"}.get(sev, "rgba(56,189,248,0.06)")
+
+                # Confidence bar
+                bar_color = "#ef4444" if confidence >= 80 else "#fbbf24" if confidence >= 55 else "#38bdf8"
+
+                st.markdown(f"""
+                <div style="background:{sev_bg};border:1px solid {sev_color}33;border-radius:10px;padding:14px 18px;margin-top:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                    <span style="font-size:13px;font-weight:500;color:{sev_color};text-transform:uppercase;letter-spacing:0.08em">
+                      {sev} · {exp['anomaly_type'].title()} detected
+                    </span>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:120px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px">
+                        <div style="width:{confidence}%;height:100%;background:{bar_color};border-radius:3px;transition:width 0.5s"></div>
+                      </div>
+                      <span style="font-size:13px;font-weight:500;color:{bar_color};min-width:40px">{confidence}% confidence</span>
+                    </div>
+                  </div>
+                  <p style="font-size:13px;color:#c0d0e0;line-height:1.6;margin:0 0 8px">{exp['explanation']}</p>
+                  <p style="font-size:11px;color:#4a6a8a;margin:0;font-family:monospace">{exp['technical_detail']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px;padding:12px 18px;margin-top:8px">
+                  <span style="font-size:13px;color:#34d399">No anomalies detected — all readings within normal range</span>
+                </div>
+                """, unsafe_allow_html=True)
     st.subheader("Anomaly Score")
     fig_s = go.Figure()
     fig_s.add_trace(go.Scatter(
