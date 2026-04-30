@@ -975,24 +975,8 @@ if df is not None and sensor_cols is not None:
         st.plotly_chart(fig_h, use_container_width=True)
         st.caption("Red = moving together · Blue = moving opposite · Grey = no relationship")
 
-        # Existing drift events below heatmap
-        if drift_events:
-            for ev in drift_events[:4]:
-                sev_color = "#ef4444" if ev["severity"] == "high" else "#f59e0b"
-                st.markdown(
-                    f"<div style='padding:10px 14px;margin:6px 0;border-radius:8px;"
-                    f"border-left:3px solid {sev_color};background:#111118;"
-                    f"border:1px solid #1e1e2a;border-left:3px solid {sev_color}'>"
-                    f"<strong style='color:#e0e0f0;font-size:14px'>{ev['parameters']}</strong><br>"
-                    f"<span style='font-size:13px;color:#8888aa'>{ev['message']}</span><br>"
-                    f"<span style='font-size:11px;color:#4a4a6a'>{ev['time_range']}</span></div>",
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlated drifts detected</div>", unsafe_allow_html=True)
-
     with col_b:
-        st.markdown("<p style='font-size:12px;color:#4a7a9f;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px'>When did sensor relationships change?</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px;color:#4a7a9f;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px'>Sensor Relationship Shifts</p>", unsafe_allow_html=True)
 
         # Build correlation change timeline
         pair_idx = 0
