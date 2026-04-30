@@ -457,6 +457,9 @@ with st.sidebar:
 
 # ── Theme state ───────────────────────────────────────────────
 if "data_source" not in st.session_state:
+    st.session_state.data_source = "Simulated demo data"
+
+# ── Data source toggle + theme button ─────────────────────────
 col_toggle1, col_toggle2, col_spacer, col_theme = st.columns([1, 1, 1.5, 0.5])
 with col_toggle1:
     if st.button("📊 Simulated Demo", use_container_width=True):
