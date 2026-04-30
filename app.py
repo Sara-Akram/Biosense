@@ -808,7 +808,7 @@ if df is not None and sensor_cols is not None:
                 ),
                 font=dict(color="#e0e0f0"),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False})
 
             # ── Explanation card ──────────────────────────────
             anom_count = int(df["detected_anomaly"].sum())
@@ -948,7 +948,7 @@ if df is not None and sensor_cols is not None:
     layout_s["yaxis"]["title_font"] = dict(color="#8fafc8", size=13)
     layout_s["xaxis"]["tickfont"] = dict(color="#8fafc8", size=11)
     fig_s.update_layout(**layout_s)
-    st.plotly_chart(fig_s, use_container_width=True)
+    st.plotly_chart(fig_s, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False})
 
     # ── Correlation section ──────────────────────────────────
     st.subheader("Correlation Analysis")
@@ -972,7 +972,7 @@ if df is not None and sensor_cols is not None:
             xaxis=dict(tickfont=dict(color="#8fafc8", size=11)),
             yaxis=dict(tickfont=dict(color="#8fafc8", size=11)),
         )
-        st.plotly_chart(fig_h, use_container_width=True)
+        st.plotly_chart(fig_h, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False})
         st.caption("Red = moving together · Blue = moving opposite · Grey = no relationship")
 
     with col_b:
@@ -1060,11 +1060,11 @@ if df is not None and sensor_cols is not None:
                   <div style='font-size:12px;color:#5a7a8f;line-height:1.4'>{ev['why']}</div>
                 </div>"""
 
-            # Fixed window showing exactly 3 events — scroll inside to see older ones
+            # Show latest 8 events — no inner scroll, page scrolls naturally
             events_html = ""
-            for ev in timeline_events:
+            for ev in timeline_events[:8]:
                 events_html += render_tl_event(ev)
-            all_html = f"<div style='overflow-y:auto;overflow-x:visible;height:330px;padding-left:20px'><div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.2)'>{events_html}</div></div>"
+            all_html = f"<div style='position:relative;padding-left:20px;border-left:1px solid rgba(56,138,221,0.2)'>{events_html}</div>"
             st.markdown(all_html, unsafe_allow_html=True)
         else:
             st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlation changes detected in this window</div>", unsafe_allow_html=True)
@@ -1100,7 +1100,7 @@ if df is not None and sensor_cols is not None:
         layout_r["yaxis"]["title_font"] = dict(color="#8fafc8", size=13)
         layout_r["xaxis"]["tickfont"] = dict(color="#8fafc8", size=11)
         fig_r.update_layout(**layout_r)
-        st.plotly_chart(fig_r, use_container_width=True)
+        st.plotly_chart(fig_r, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False})
 
     # ── Event log ────────────────────────────────────────────
     st.subheader("Event Log")
