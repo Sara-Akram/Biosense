@@ -1073,7 +1073,7 @@ if df is not None and sensor_cols is not None:
                 for ev in timeline_events[3:]:
                     scroll_html += render_tl_event(ev)
                 scroll_html += "</div>"
-                st.markdown(f"<p style='font-size:11px;color:#3a5a7a;margin:8px 0 4px'>Earlier events — scroll to see more</p>", unsafe_allow_html=True)
+                
                 st.markdown(scroll_html, unsafe_allow_html=True)
         else:
             st.markdown("<div style='padding:16px;text-align:center;color:#4a4a6a;font-size:13px'>No correlation changes detected in this window</div>", unsafe_allow_html=True)
