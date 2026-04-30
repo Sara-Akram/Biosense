@@ -24,6 +24,24 @@ st.set_page_config(
 # ── Dark theme CSS ───────────────────────────────────────────
 st.markdown("""
 <style>
+    /* Fix scroll on Streamlit Cloud iframe */
+    html, body {
+        overflow-y: auto !important;
+        touch-action: pan-y !important;
+    }
+    .main, [data-testid="stAppViewContainer"] {
+        overflow-y: auto !important;
+        touch-action: pan-y !important;
+    }
+    /* Prevent any element from capturing scroll */
+    .stPlotlyChart, .js-plotly-plot, .plotly {
+        touch-action: pan-y !important;
+        pointer-events: none;
+    }
+    .stPlotlyChart:hover, .js-plotly-plot:hover {
+        pointer-events: auto;
+    }
+
     /* Force dark background everywhere */
     .stApp, .main, [data-testid="stAppViewContainer"],
     [data-testid="stHeader"], [data-testid="stToolbar"] {
