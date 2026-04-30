@@ -523,12 +523,12 @@ if data_source == "Upload CSV":
             sensor_cols = None
 
 else:
-    @st.cache_data
     def load_demo(hours):
         return generate_bioreactor_data(hours=hours)
 
     df = load_demo(hours)
-    sensor_cols = ["temperature_c", "ph", "dissolved_oxygen_pct", "co2_pct", "humidity_pct"]
+    all_possible = ["temperature_c", "ph", "dissolved_oxygen_pct", "co2_pct", "humidity_pct"]
+    sensor_cols = [c for c in all_possible if c in df.columns]
 
 
 # ── Analysis ─────────────────────────────────────────────────
