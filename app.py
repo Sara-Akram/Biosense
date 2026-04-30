@@ -315,16 +315,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── Chart theme (dark) ───────────────────────────────────────
-# ── Theme state (must be before CHART_BG) ────────────────────
-if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
-is_light = st.session_state.get("theme") == "light"
-
-# ── Chart theme ───────────────────────────────────────────────
-CHART_BG = "#f5f6fa" if is_light else "#0a0a0f"
-CHART_GRID = "rgba(0,0,0,0.07)" if is_light else "rgba(255,255,255,0.04)"
-CHART_TEXT = "#334e6e" if is_light else "#4a7a9f"
+# ── Chart theme (always dark) ─────────────────────────────────
+CHART_BG = "#0a0a0f"
+CHART_GRID = "rgba(255,255,255,0.04)"
+CHART_TEXT = "#4a7a9f"
 CHART_COLORS = ["#38bdf8", "#06b6d4", "#0ea5e9", "#67e8f9", "#22d3ee", "#7dd3fc"]
 ANOMALY_COLOR = "#ef4444"
 NORMAL_BAND = "rgba(56,189,248,0.05)"
@@ -394,72 +388,17 @@ st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  A
 
 
 # ── Sidebar (alert settings only) ────────────────────────────
-with st.sidebar:
-    st.markdown("### Alert Settings")
+# ── Default alert values ──────────────────────────────────────
+resend_api_key = None
+alert_email = None
+from_email = "onboarding@resend.dev"
+alert_severity = "Warning and above"
+alerts_enabled = False
 
-    alerts_enabled = st.toggle("Enable email alerts", value=False)
-
-    if alerts_enabled:
-        resend_api_key = st.text_input(
-            "Resend API Key",
-            type="password",
-            placeholder="re_xxxxxxxxxxxx",
-            help="Get your free API key at resend.com"
-        )
-        alert_email = st.text_input(
-            "Send Alerts To",
-            placeholder="lab@yourcompany.com",
-        )
-        from_email = st.text_input(
-            "Send Alerts From",
-            value="onboarding@resend.dev",
-            help="Use onboarding@resend.dev for testing."
-        )
-        alert_severity = st.selectbox(
-            "Minimum Severity To Alert",
-            ["Critical only", "Warning and above", "All"],
-            index=1,
-        )
-
-        if st.button("Send Test Email"):
-            if resend_api_key and alert_email:
-                from alerts import send_alert
-                with st.spinner("Sending..."):
-                    result = send_alert(
-                        api_key=resend_api_key,
-                        to_email=alert_email,
-                        from_email=from_email,
-                        alert_type="Test alert",
-                        severity="warning",
-                        parameter="Temperature",
-                        message="This is a test alert from BioSense. Your email alert system is working correctly.",
-                        value="-77.2 °C",
-                        recommendation="No action needed — this is just a test.",
-                    )
-                if result.get("success"):
-                    st.success("Test email sent!")
-                else:
-                    st.error(f"Failed: {result.get('error')}")
-            else:
-                st.warning("Enter your API key and email address first")
-    else:
-        resend_api_key = None
-        alert_email = None
-        from_email = "onboarding@resend.dev"
-        alert_severity = "Warning and above"
-
-    st.divider()
-    st.markdown("<div style='text-align:center;margin-top:2rem'>"
-                "<span style='color:#4a4a6a;font-size:12px'>BioSense v3.0</span><br>"
-                "<span style='color:#3a3a5a;font-size:11px'>by Sara Akram</span>"
-                "</div>", unsafe_allow_html=True)
-
-
-# ── Theme state ───────────────────────────────────────────────
 if "data_source" not in st.session_state:
     st.session_state.data_source = "Simulated demo data"
 
-# ── Data source toggle + pill theme toggle ────────────────────
+# ── Data source toggle ────────────────────────────────────────
 col_toggle1, col_toggle2, col_spacer = st.columns([1, 1, 2])
 with col_toggle1:
     if st.button("📊 Simulated Demo", use_container_width=True):
@@ -467,164 +406,6 @@ with col_toggle1:
 with col_toggle2:
     if st.button("📁 Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
-
-# Pill toggle injected as HTML — fixed top right
-pill_bg = "#e8e8e8" if is_light else "#2a2a3a"
-sun_active = "background:#f59e0b;color:#fff;" if is_light else "background:transparent;color:#666;"
-moon_active = "background:#3b4a6b;color:#fff;" if not is_light else "background:transparent;color:#aaa;"
-
-st.markdown(f"""
-<style>
-.theme-pill {{
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    background: {pill_bg};
-    border-radius: 999px;
-    padding: 4px;
-    gap: 2px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}}
-.theme-pill a {{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 999px;
-    font-size: 16px;
-    text-decoration: none;
-    transition: background 0.2s;
-    cursor: pointer;
-}}
-.sun {{ {sun_active} }}
-.moon {{ {moon_active} }}
-</style>
-<div class="theme-pill">
-  <a class="sun" title="Light mode" onclick="window.parent.document.querySelector('button[data-testid=stBaseButton-secondary]') && false" href="?theme=light">☀️</a>
-  <a class="moon" title="Dark mode" href="?theme=dark">🌙</a>
-</div>
-""", unsafe_allow_html=True)
-
-# Handle theme from URL param
-query_params = st.query_params
-if "theme" in query_params:
-    new_theme = query_params["theme"]
-    if new_theme != st.session_state.get("theme"):
-        st.session_state.theme = new_theme
-        is_light = new_theme == "light"
-
-# ── Apply light mode CSS ──────────────────────────────────────
-if is_light:
-    st.markdown("""
-    <style>
-        /* Light grey background */
-        .stApp, .main, [data-testid="stAppViewContainer"],
-        [data-testid="stHeader"] {
-            background-color: #e8eaf0 !important;
-        }
-        .block-container { background-color: #e8eaf0 !important; }
-
-        /* Strong text contrast */
-        h1, h2, h3 { color: #0f172a !important; }
-        p, span, label, div { color: #1e293b !important; }
-
-        /* Section headers */
-        [data-testid="stSubheader"] h2,
-        [data-testid="stSubheader"] p { color: #1e4a7a !important; font-weight: 500 !important; }
-
-        /* Apple glass metric cards */
-        [data-testid="stMetric"] {
-            background: rgba(255,255,255,0.75) !important;
-            border: 1px solid rgba(255,255,255,0.9) !important;
-            border-radius: 16px !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1) !important;
-        }
-        [data-testid="stMetricLabel"] p {
-            color: #334e6e !important;
-            font-weight: 600 !important;
-            font-size: 0.72rem !important;
-        }
-        [data-testid="stMetricValue"] div { color: #0f172a !important; font-weight: 500 !important; }
-        [data-testid="stMetricDelta"] div { color: #1a6098 !important; }
-
-        /* Glass pill tabs */
-        .stTabs [data-baseweb="tab-list"] {
-            background: rgba(255,255,255,0.5) !important;
-            border-radius: 12px !important;
-            padding: 4px !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border: 1px solid rgba(255,255,255,0.8) !important;
-            box-shadow: 0 1px 6px rgba(0,0,0,0.06) !important;
-        }
-        .stTabs [data-baseweb="tab"] {
-            color: #334e6e !important;
-            font-weight: 500 !important;
-            border-radius: 8px !important;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #0f172a !important;
-            background: rgba(255,255,255,0.95) !important;
-            box-shadow: 0 1px 6px rgba(0,0,0,0.1) !important;
-        }
-        .stTabs [data-baseweb="tab-highlight"],
-        .stTabs [data-baseweb="tab-border"] { display: none !important; }
-
-        /* Glass expander */
-        [data-testid="stExpander"] {
-            background: rgba(255,255,255,0.6) !important;
-            border: 1px solid rgba(255,255,255,0.85) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
-        }
-        [data-testid="stExpander"] p,
-        [data-testid="stExpander"] label,
-        [data-testid="stExpander"] div { color: #1e293b !important; }
-
-        /* Sidebar */
-        [data-testid="stSidebar"] {
-            background-color: rgba(228,232,244,0.9) !important;
-            border-right: 1px solid rgba(0,0,0,0.08) !important;
-        }
-        [data-testid="stSidebar"] * { color: #1e293b !important; }
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3 { color: #0f172a !important; }
-
-        /* Logo */
-        .bs-diamond { color: #6a3ab7 !important; }
-
-        /* Caption */
-        [data-testid="stCaption"] p, .stCaption p { color: #4a6a8a !important; }
-
-        /* Dataframe */
-        [data-testid="stDataFrame"] {
-            background: rgba(255,255,255,0.7) !important;
-            border: 1px solid rgba(0,0,0,0.07) !important;
-            border-radius: 10px !important;
-        }
-
-        /* Download button */
-        .stDownloadButton button {
-            color: #1a6098 !important;
-            border-color: rgba(26,96,152,0.4) !important;
-        }
-
-        /* Selectbox and inputs */
-        [data-baseweb="select"] * { color: #1e293b !important; }
-
-        /* Anomaly explanation cards in light mode */
-        .stMarkdown p { color: #1e293b !important; }
-    </style>
-    """, unsafe_allow_html=True)
 
 if "data_source" not in st.session_state:
     st.session_state.data_source = "Simulated demo data"
@@ -651,6 +432,33 @@ with st.expander("Analysis Parameters", expanded=False):
         )
     if data_source == "Simulated demo data":
         hours = st.slider("Monitoring Window (Hours)", 6, 48, 24)
+
+with st.expander("📧 Alert Settings", expanded=False):
+    alerts_enabled = st.toggle("Enable email alerts", value=False)
+    if alerts_enabled:
+        col_a1, col_a2 = st.columns(2)
+        with col_a1:
+            resend_api_key = st.text_input("Resend API Key", type="password", placeholder="re_xxxxxxxxxxxx")
+            alert_email = st.text_input("Send Alerts To", placeholder="lab@yourcompany.com")
+        with col_a2:
+            from_email = st.text_input("Send Alerts From", value="onboarding@resend.dev")
+            alert_severity = st.selectbox("Minimum Severity", ["Critical only", "Warning and above", "All"], index=1)
+        if st.button("Send Test Email"):
+            if resend_api_key and alert_email:
+                from alerts import send_alert
+                with st.spinner("Sending..."):
+                    result = send_alert(
+                        api_key=resend_api_key, to_email=alert_email, from_email=from_email,
+                        alert_type="Test alert", severity="warning", parameter="Temperature",
+                        message="This is a test alert from BioSense. Your email alert system is working correctly.",
+                        value="-77.2 °C", recommendation="No action needed — this is just a test.",
+                    )
+                if result.get("success"):
+                    st.success("Test email sent!")
+                else:
+                    st.error(f"Failed: {result.get('error')}")
+            else:
+                st.warning("Enter your API key and email address first")
 
 
 # ── Data loading ─────────────────────────────────────────────
