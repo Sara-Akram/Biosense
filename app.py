@@ -528,7 +528,7 @@ else:
         return generate_bioreactor_data(hours=hours)
 
     df = load_demo(hours)
-    sensor_cols = ["temperature_c", "ph", "dissolved_oxygen_pct"]
+    sensor_cols = ["temperature_c", "ph", "dissolved_oxygen_pct", "co2_pct", "humidity_pct"]
 
 
 # ── Analysis ─────────────────────────────────────────────────
@@ -589,8 +589,10 @@ if df is not None and sensor_cols is not None:
 
     sensor_labels = {
         "temperature_c": "Temperature",
-        "ph": "pH level",
+        "ph": "pH Level",
         "dissolved_oxygen_pct": "Dissolved O₂",
+        "co2_pct": "CO₂",
+        "humidity_pct": "Humidity",
     }
 
     for i, col_name in enumerate(sensor_cols[:3]):
@@ -613,6 +615,8 @@ if df is not None and sensor_cols is not None:
         "temperature_c": {"label": "Temperature", "unit": "°C", "color": "#38bdf8", "band_fill": "rgba(56,189,248,0.15)", "band_border": "rgba(56,189,248,0.4)"},
         "ph": {"label": "pH", "unit": "", "color": "#34d399", "band_fill": "rgba(52,211,153,0.15)", "band_border": "rgba(52,211,153,0.4)"},
         "dissolved_oxygen_pct": {"label": "Dissolved O₂", "unit": "%", "color": "#fbbf24", "band_fill": "rgba(251,191,36,0.15)", "band_border": "rgba(251,191,36,0.4)"},
+        "co2_pct": {"label": "CO₂", "unit": "%", "color": "#f472b6", "band_fill": "rgba(244,114,182,0.15)", "band_border": "rgba(244,114,182,0.4)"},
+        "humidity_pct": {"label": "Humidity", "unit": "%RH", "color": "#a78bfa", "band_fill": "rgba(167,139,250,0.15)", "band_border": "rgba(167,139,250,0.4)"},
         # ATEK standard parameters
         "Temperature_C": {"label": "Temperature", "unit": "°C", "color": "#38bdf8", "band_fill": "rgba(56,189,248,0.15)", "band_border": "rgba(56,189,248,0.4)"},
         "Relative_Humidity_pct": {"label": "Humidity", "unit": "%RH", "color": "#34d399", "band_fill": "rgba(52,211,153,0.15)", "band_border": "rgba(52,211,153,0.4)"},
