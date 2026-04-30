@@ -322,9 +322,9 @@ if "theme" not in st.session_state:
 is_light = st.session_state.get("theme") == "light"
 
 # ── Chart theme ───────────────────────────────────────────────
-CHART_BG = "#f2f4f8" if is_light else "#0a0a0f"
-CHART_GRID = "rgba(0,0,0,0.06)" if is_light else "rgba(255,255,255,0.04)"
-CHART_TEXT = "#4a6a8a" if is_light else "#4a7a9f"
+CHART_BG = "#f5f6fa" if is_light else "#0a0a0f"
+CHART_GRID = "rgba(0,0,0,0.07)" if is_light else "rgba(255,255,255,0.04)"
+CHART_TEXT = "#334e6e" if is_light else "#4a7a9f"
 CHART_COLORS = ["#38bdf8", "#06b6d4", "#0ea5e9", "#67e8f9", "#22d3ee", "#7dd3fc"]
 ANOMALY_COLOR = "#ef4444"
 NORMAL_BAND = "rgba(56,189,248,0.05)"
@@ -459,19 +459,63 @@ with st.sidebar:
 if "data_source" not in st.session_state:
     st.session_state.data_source = "Simulated demo data"
 
-# ── Data source toggle + theme button ─────────────────────────
-col_toggle1, col_toggle2, col_spacer, col_theme = st.columns([1, 1, 1.5, 0.5])
+# ── Data source toggle + pill theme toggle ────────────────────
+col_toggle1, col_toggle2, col_spacer = st.columns([1, 1, 2])
 with col_toggle1:
     if st.button("📊 Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
     if st.button("📁 Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
-with col_theme:
-    icon = "🌙" if is_light else "☀️"
-    if st.button(icon, use_container_width=True, help="Toggle light/dark mode"):
-        st.session_state.theme = "light" if not is_light else "dark"
-        st.rerun()
+
+# Pill toggle injected as HTML — fixed top right
+pill_bg = "#e8e8e8" if is_light else "#2a2a3a"
+sun_active = "background:#f59e0b;color:#fff;" if is_light else "background:transparent;color:#666;"
+moon_active = "background:#3b4a6b;color:#fff;" if not is_light else "background:transparent;color:#aaa;"
+
+st.markdown(f"""
+<style>
+.theme-pill {{
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    background: {pill_bg};
+    border-radius: 999px;
+    padding: 4px;
+    gap: 2px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}}
+.theme-pill a {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    font-size: 16px;
+    text-decoration: none;
+    transition: background 0.2s;
+    cursor: pointer;
+}}
+.sun {{ {sun_active} }}
+.moon {{ {moon_active} }}
+</style>
+<div class="theme-pill">
+  <a class="sun" title="Light mode" onclick="window.parent.document.querySelector('button[data-testid=stBaseButton-secondary]') && false" href="?theme=light">☀️</a>
+  <a class="moon" title="Dark mode" href="?theme=dark">🌙</a>
+</div>
+""", unsafe_allow_html=True)
+
+# Handle theme from URL param
+query_params = st.query_params
+if "theme" in query_params:
+    new_theme = query_params["theme"]
+    if new_theme != st.session_state.get("theme"):
+        st.session_state.theme = new_theme
+        is_light = new_theme == "light"
 
 # ── Apply light mode CSS ──────────────────────────────────────
 if is_light:
@@ -480,93 +524,105 @@ if is_light:
         /* Light grey background */
         .stApp, .main, [data-testid="stAppViewContainer"],
         [data-testid="stHeader"] {
-            background-color: #f0f2f7 !important;
+            background-color: #e8eaf0 !important;
         }
-        .block-container { background-color: #f0f2f7 !important; }
+        .block-container { background-color: #e8eaf0 !important; }
 
-        /* Text */
-        h1, h2, h3, p, span, label, div { color: #1a1a2e !important; }
-
-        /* Apple glass metric cards */
-        [data-testid="stMetric"] {
-            background: rgba(255,255,255,0.55) !important;
-            border: 1px solid rgba(255,255,255,0.85) !important;
-            border-radius: 16px !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04),
-                        inset 0 1px 0 rgba(255,255,255,0.9) !important;
-        }
-        [data-testid="stMetricLabel"] p { color: #5a7a9f !important; }
-        [data-testid="stMetricValue"] div { color: #1a1a2e !important; }
-        [data-testid="stMetricDelta"] div { color: #1a6098 !important; }
-
-        /* Glass tabs */
-        .stTabs [data-baseweb="tab-list"] {
-            background: rgba(255,255,255,0.4) !important;
-            border-radius: 12px !important;
-            padding: 4px !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255,255,255,0.7) !important;
-            gap: 2px !important;
-        }
-        .stTabs [data-baseweb="tab"] {
-            color: #5a7a9f !important;
-            border-radius: 8px !important;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #1a6098 !important;
-            background: rgba(255,255,255,0.8) !important;
-            box-shadow: 0 1px 6px rgba(0,0,0,0.08) !important;
-        }
-        .stTabs [data-baseweb="tab-highlight"] {
-            display: none !important;
-        }
-        .stTabs [data-baseweb="tab-border"] {
-            display: none !important;
-        }
-
-        /* Glass expander */
-        [data-testid="stExpander"] {
-            background: rgba(255,255,255,0.5) !important;
-            border: 1px solid rgba(255,255,255,0.75) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.05) !important;
-        }
-
-        /* Sidebar */
-        [data-testid="stSidebar"] {
-            background-color: rgba(235,238,248,0.85) !important;
-            border-right: 1px solid rgba(0,0,0,0.07) !important;
-            backdrop-filter: blur(20px) !important;
-        }
-        [data-testid="stSidebar"] * { color: #3a5a7a !important; }
+        /* Strong text contrast */
+        h1, h2, h3 { color: #0f172a !important; }
+        p, span, label, div { color: #1e293b !important; }
 
         /* Section headers */
         [data-testid="stSubheader"] h2,
-        [data-testid="stSubheader"] p { color: #3a6a9f !important; }
+        [data-testid="stSubheader"] p { color: #1e4a7a !important; font-weight: 500 !important; }
+
+        /* Apple glass metric cards */
+        [data-testid="stMetric"] {
+            background: rgba(255,255,255,0.75) !important;
+            border: 1px solid rgba(255,255,255,0.9) !important;
+            border-radius: 16px !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1) !important;
+        }
+        [data-testid="stMetricLabel"] p {
+            color: #334e6e !important;
+            font-weight: 600 !important;
+            font-size: 0.72rem !important;
+        }
+        [data-testid="stMetricValue"] div { color: #0f172a !important; font-weight: 500 !important; }
+        [data-testid="stMetricDelta"] div { color: #1a6098 !important; }
+
+        /* Glass pill tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            background: rgba(255,255,255,0.5) !important;
+            border-radius: 12px !important;
+            padding: 4px !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255,255,255,0.8) !important;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06) !important;
+        }
+        .stTabs [data-baseweb="tab"] {
+            color: #334e6e !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+        }
+        .stTabs [aria-selected="true"] {
+            color: #0f172a !important;
+            background: rgba(255,255,255,0.95) !important;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.1) !important;
+        }
+        .stTabs [data-baseweb="tab-highlight"],
+        .stTabs [data-baseweb="tab-border"] { display: none !important; }
+
+        /* Glass expander */
+        [data-testid="stExpander"] {
+            background: rgba(255,255,255,0.6) !important;
+            border: 1px solid rgba(255,255,255,0.85) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
+        }
+        [data-testid="stExpander"] p,
+        [data-testid="stExpander"] label,
+        [data-testid="stExpander"] div { color: #1e293b !important; }
+
+        /* Sidebar */
+        [data-testid="stSidebar"] {
+            background-color: rgba(228,232,244,0.9) !important;
+            border-right: 1px solid rgba(0,0,0,0.08) !important;
+        }
+        [data-testid="stSidebar"] * { color: #1e293b !important; }
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 { color: #0f172a !important; }
 
         /* Logo */
         .bs-diamond { color: #6a3ab7 !important; }
 
         /* Caption */
-        [data-testid="stCaption"] p, .stCaption p { color: #7a9ab5 !important; }
+        [data-testid="stCaption"] p, .stCaption p { color: #4a6a8a !important; }
 
         /* Dataframe */
         [data-testid="stDataFrame"] {
-            background: rgba(255,255,255,0.6) !important;
-            border: 1px solid rgba(0,0,0,0.06) !important;
+            background: rgba(255,255,255,0.7) !important;
+            border: 1px solid rgba(0,0,0,0.07) !important;
             border-radius: 10px !important;
         }
 
         /* Download button */
         .stDownloadButton button {
             color: #1a6098 !important;
-            border-color: rgba(26,96,152,0.3) !important;
+            border-color: rgba(26,96,152,0.4) !important;
         }
+
+        /* Selectbox and inputs */
+        [data-baseweb="select"] * { color: #1e293b !important; }
+
+        /* Anomaly explanation cards in light mode */
+        .stMarkdown p { color: #1e293b !important; }
     </style>
     """, unsafe_allow_html=True)
 
