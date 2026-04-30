@@ -271,7 +271,40 @@ def dark_layout(height=280):
 
 
 # ── Header ───────────────────────────────────────────────────
-st.markdown("<h1 style='margin-bottom:0'>◆ BioSense</h1>", unsafe_allow_html=True)
+st.markdown("""
+<style>
+@keyframes shimmerwave{
+  0%{background-position:-400% center}
+  100%{background-position:400% center}
+}
+@keyframes diamondglow{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(56,189,248,0.3))}
+  45%{filter:drop-shadow(0 0 12px rgba(56,189,248,1)) drop-shadow(0 0 24px rgba(56,189,248,0.5))}
+}
+.biosense-diamond{
+  font-size:2rem;color:#38bdf8;
+  display:inline-block;
+  animation:diamondglow 4s ease-in-out infinite;
+  margin-right:8px;
+}
+.biosense-title{
+  font-size:2rem;font-weight:300;letter-spacing:0.02em;
+  background:linear-gradient(
+    90deg,
+    #e0e0f0 0%,#e0e0f0 10%,
+    #38bdf8 28%,#ccefff 35%,#ffffff 40%,#ccefff 45%,#38bdf8 52%,
+    #e0e0f0 65%,#e0e0f0 100%
+  );
+  background-size:400% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmerwave 4s ease-in-out infinite;
+}
+</style>
+<div style="display:flex;align-items:center;margin-bottom:0">
+  <span class="biosense-diamond">◆</span>
+  <span class="biosense-title">BioSense</span>
+</div>
+""", unsafe_allow_html=True)
 st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
 
 
