@@ -99,4 +99,3 @@ if __name__ == "__main__":
     print(f"Generated {len(df)} readings over 24 hours")
     print(f"Anomalies injected: {df['is_anomaly'].sum()} points")
     print(df.head(5))
-
