@@ -416,42 +416,118 @@ alerts_enabled = False
 if "data_source" not in st.session_state:
     st.session_state.data_source = "Simulated demo data"
 
-# ── Data source toggle ────────────────────────────────────────
-col_toggle1, col_toggle2, col_spacer = st.columns([1, 1, 2])
+if "data_source" not in st.session_state:
+    st.session_state.data_source = "Simulated demo data"
+
+data_source = st.session_state.data_source
+
+# ── Settings state ────────────────────────────────────────────
+if "show_settings" not in st.session_state:
+    st.session_state.show_settings = False
+if "sensitivity" not in st.session_state:
+    st.session_state.sensitivity = 0.02
+if "correlation_window" not in st.session_state:
+    st.session_state.correlation_window = 15
+if "hours" not in st.session_state:
+    st.session_state.hours = 24
+
+# ── Hamburger menu button ──────────────────────────────────────
+st.markdown("""
+<style>
+.hamburger-btn {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    z-index: 99999;
+    background: #1a3a5c;
+    border: 1px solid rgba(56,189,248,0.3);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    color: #38bdf8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+</style>
+""", unsafe_allow_html=True)
+
+col_toggle1, col_toggle2, col_ham = st.columns([1, 1, 0.3])
 with col_toggle1:
     if st.button("📊 Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
     if st.button("📁 Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
+with col_ham:
+    if st.button("☰", use_container_width=True, help="Open settings"):
+        st.session_state.show_settings = not st.session_state.show_settings
 
-if "data_source" not in st.session_state:
-    st.session_state.data_source = "Simulated demo data"
+# ── Sliding settings panel ────────────────────────────────────
+if st.session_state.show_settings:
+    st.markdown("""
+    <div style="background:linear-gradient(145deg,#0f1520,#111827);border:1px solid rgba(56,189,248,0.2);
+        border-radius:14px;padding:20px 24px;margin:8px 0 16px;
+        box-shadow:0 4px 24px rgba(0,0,0,0.4)">
+    """, unsafe_allow_html=True)
 
-data_source = st.session_state.data_source
+    st.markdown("##### Analysis Parameters")
 
-# ── Settings expander — always accessible ─────────────────────
-# Define defaults first so they're always available
-sensitivity = 0.02
-correlation_window = 15
-hours = 24
-
-with st.expander("Analysis Parameters", expanded=False):
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
+    # ML Sensitivity — slider + number input side by side
+    col_l1, col_n1 = st.columns([3, 1])
+    with col_l1:
         sensitivity = st.slider(
-            "ML Sensitivity", min_value=0.01, max_value=0.10, value=0.02, step=0.01,
-            help="Lower = fewer false alarms, higher = catches more subtle anomalies"
+            "ML Sensitivity", min_value=0.01, max_value=0.10,
+            value=st.session_state.sensitivity, step=0.01,
+            help="Lower = fewer false alarms"
         )
-    with col_s2:
+    with col_n1:
+        sensitivity_input = st.number_input(
+            "Value", min_value=0.01, max_value=0.10,
+            value=sensitivity, step=0.01,
+            label_visibility="hidden", key="sens_num"
+        )
+    sensitivity = sensitivity_input if sensitivity_input != st.session_state.sensitivity else sensitivity
+    st.session_state.sensitivity = sensitivity
+
+    # Correlation Window — slider + number input
+    col_l2, col_n2 = st.columns([3, 1])
+    with col_l2:
         correlation_window = st.slider(
-            "Correlation Window (Min)", min_value=5, max_value=60, value=15, step=5,
+            "Correlation Window (Min)", min_value=5, max_value=60,
+            value=st.session_state.correlation_window, step=5,
             help="Rolling window for correlation analysis"
         )
-    if data_source == "Simulated demo data":
-        hours = st.slider("Monitoring Window (Hours)", 6, 48, 24)
+    with col_n2:
+        corr_input = st.number_input(
+            "Value", min_value=5, max_value=60,
+            value=correlation_window, step=5,
+            label_visibility="hidden", key="corr_num"
+        )
+    correlation_window = corr_input if corr_input != st.session_state.correlation_window else correlation_window
+    st.session_state.correlation_window = correlation_window
 
-with st.expander("Alert Settings", expanded=False):
+    # Monitoring window (simulated demo only)
+    hours = st.session_state.hours
+    if data_source == "Simulated demo data":
+        col_l3, col_n3 = st.columns([3, 1])
+        with col_l3:
+            hours = st.slider(
+                "Monitoring Window (Hours)", min_value=6, max_value=48,
+                value=st.session_state.hours, step=1
+            )
+        with col_n3:
+            hours_input = st.number_input(
+                "Value", min_value=6, max_value=48,
+                value=hours, step=1,
+                label_visibility="hidden", key="hours_num"
+            )
+        hours = hours_input if hours_input != st.session_state.hours else hours
+        st.session_state.hours = hours
+
+    st.divider()
+    st.markdown("##### Alert Settings")
+
     alerts_enabled = st.toggle("Enable email alerts", value=False)
     if alerts_enabled:
         col_a1, col_a2 = st.columns(2)
@@ -477,6 +553,23 @@ with st.expander("Alert Settings", expanded=False):
                     st.error(f"Failed: {result.get('error')}")
             else:
                 st.warning("Enter your API key and email address first")
+
+    if st.button("Close Settings ✕", use_container_width=True):
+        st.session_state.show_settings = False
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+else:
+    # Defaults when panel is closed
+    sensitivity = st.session_state.sensitivity
+    correlation_window = st.session_state.correlation_window
+    hours = st.session_state.hours
+    alerts_enabled = False
+    resend_api_key = None
+    alert_email = None
+    from_email = "onboarding@resend.dev"
+    alert_severity = "Warning and above"
 
 
 # ── Data loading ─────────────────────────────────────────────
