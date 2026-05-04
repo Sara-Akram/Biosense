@@ -1,50 +1,95 @@
 """
 auth.py
 -------
-BioSense login system — splash screen + credential gate.
+BioSense Google OAuth login.
 
-Secrets format (Streamlit Cloud → App settings → Secrets):
-
-[users]
-"maria@atek.com" = { password = "atek2024", name = "Maria Fernanda", role = "client" }
-"matthew@polysense.com" = { password = "poly2024", name = "Matthew Gale", role = "client" }
-"sara@biosense.app" = { password = "yourpassword", name = "Sara", role = "admin" }
+Flow:
+1. User clicks "Sign in with Google"
+2. Redirected to Google login
+3. Google sends back a code to our redirect URI
+4. We exchange the code for user info
+5. Check if email is in allowed_users list
+6. If yes — log them in
 """
 
 import streamlit as st
-import hashlib
+import requests
+import urllib.parse
 
 
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+def get_google_auth_url() -> str:
+    """Build the Google OAuth URL to redirect the user to."""
+    client_id = st.secrets["google_oauth"]["client_id"]
+    redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "select_account",
+    }
+    base = "https://accounts.google.com/o/oauth2/v2/auth"
+    return base + "?" + urllib.parse.urlencode(params)
 
 
-def check_credentials(email: str, password: str):
+def exchange_code_for_user(code: str) -> dict | None:
+    """
+    Exchange the OAuth code Google sent us for actual user info.
+    Returns user dict or None if it fails.
+    """
+    client_id = st.secrets["google_oauth"]["client_id"]
+    client_secret = st.secrets["google_oauth"]["client_secret"]
+    redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+
+    # Step 1 — get access token
+    token_resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        },
+        timeout=10,
+    )
+
+    if not token_resp.ok:
+        return None
+
+    access_token = token_resp.json().get("access_token")
+    if not access_token:
+        return None
+
+    # Step 2 — get user info using the token
+    user_resp = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=10,
+    )
+
+    if not user_resp.ok:
+        return None
+
+    return user_resp.json()  # has email, name, picture
+
+
+def is_allowed(email: str) -> bool:
+    """Check if this email is in the approved list."""
     try:
-        users = st.secrets.get("users", {})
+        allowed = st.secrets["allowed_users"]["emails"]
+        return email.lower() in [e.lower() for e in allowed]
     except Exception:
-        return None
-
-    email = email.strip().lower()
-    user = users.get(email)
-    if not user:
-        return None
-
-    stored_pw = user.get("password", "")
-    if stored_pw == password or stored_pw == hash_password(password):
-        return {
-            "email": email,
-            "name": user.get("name", email.split("@")[0].title()),
-            "role": user.get("role", "viewer"),
-        }
-    return None
+        return False
 
 
 def is_logged_in() -> bool:
     return st.session_state.get("auth_user") is not None
 
 
-def get_current_user():
+def get_current_user() -> dict | None:
     return st.session_state.get("auth_user")
 
 
@@ -55,8 +100,55 @@ def logout():
     st.rerun()
 
 
+def handle_oauth_callback():
+    """
+    Called on every page load. If Google sent back a ?code=,
+    we exchange it, check the email, and log the user in.
+    """
+    params = st.query_params
+    code = params.get("code")
+    error = params.get("error")
+
+    if error:
+        st.session_state.auth_error = "Google sign-in was cancelled. Please try again."
+        st.query_params.clear()
+        return
+
+    if code and not is_logged_in():
+        with st.spinner("Signing you in..."):
+            user_info = exchange_code_for_user(code)
+
+        # Clear the code from the URL immediately
+        st.query_params.clear()
+
+        if not user_info:
+            st.session_state.auth_error = "Could not retrieve your Google account info. Please try again."
+            return
+
+        email = user_info.get("email", "")
+
+        if not is_allowed(email):
+            st.session_state.auth_error = f"{email} doesn't have access to BioSense. Request access from Sara."
+            return
+
+        # Logged in
+        st.session_state.auth_user = {
+            "email": email,
+            "name": user_info.get("name", email.split("@")[0].title()),
+            "picture": user_info.get("picture", ""),
+        }
+        st.session_state.auth_error = ""
+        st.session_state.tour_done = False
+        st.session_state.tour_step = 0
+        st.rerun()
+
+
 def render_login_page():
-    """Full-page splash + login. Option B orb with waveform background."""
+    """Full splash screen + Google sign-in button."""
+
+    # Initialize error state
+    if "auth_error" not in st.session_state:
+        st.session_state.auth_error = ""
 
     st.markdown("""
     <style>
@@ -73,84 +165,38 @@ def render_login_page():
         max-width: 100% !important;
     }
 
-    /* Splash wrapper */
-    .splash {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #07080f;
-        overflow: hidden;
-        z-index: 0;
-    }
-
-    /* Waveform SVG background */
-    .wave-bg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0.18;
-    }
-
     /* Orb glow */
-    .orb {
-        position: absolute;
-        width: 520px;
-        height: 520px;
-        border-radius: 50%;
-        background: radial-gradient(circle,
-            rgba(56,189,248,0.22) 0%,
-            rgba(167,139,250,0.10) 45%,
-            transparent 70%);
-        filter: blur(48px);
-        animation: orbPulse 6s ease-in-out infinite;
-        pointer-events: none;
-    }
     @keyframes orbPulse {
         0%,100% { transform: scale(1); opacity: 1; }
         50%      { transform: scale(1.08); opacity: 0.75; }
     }
-
-    /* Second smaller orb for depth */
-    .orb2 {
-        position: absolute;
-        width: 280px;
-        height: 280px;
-        border-radius: 50%;
-        background: radial-gradient(circle,
-            rgba(167,139,250,0.18) 0%,
-            transparent 65%);
-        filter: blur(36px);
-        transform: translate(80px, 60px);
-        animation: orbPulse2 8s ease-in-out infinite;
-        pointer-events: none;
-    }
     @keyframes orbPulse2 {
-        0%,100% { transform: translate(80px,60px) scale(1); opacity: 0.7; }
-        50%      { transform: translate(60px,80px) scale(1.1); opacity: 1; }
+        0%,100% { transform: translate(80px,60px) scale(1); opacity:0.7; }
+        50%      { transform: translate(60px,80px) scale(1.1); opacity:1; }
     }
 
-    /* Waveform line animation */
+    /* Waveform draw */
     @keyframes waveDraw {
-        from { stroke-dashoffset: 2000; }
+        from { stroke-dashoffset: 2400; }
         to   { stroke-dashoffset: 0; }
     }
-    @keyframes waveFlow {
-        from { transform: translateX(0); }
-        to   { transform: translateX(-50%); }
-    }
 
-    /* Logo */
+    /* Logo shimmer */
     @keyframes shimmer {
         0%   { background-position: 0% center; }
         100% { background-position: 400% center; }
     }
     @keyframes diamondPulse {
-        0%,100% { opacity: 1; transform: scale(1); }
-        50%     { opacity: 0.45; transform: scale(1.12); }
+        0%,100% { opacity:1; transform:scale(1); }
+        50%     { opacity:0.45; transform:scale(1.12); }
     }
+
+    /* Login card slide up */
+    @keyframes slideUp {
+        from { opacity:0; transform: translateY(40px); }
+        to   { opacity:1; transform: translateY(0); }
+    }
+
     .splash-diamond {
         font-size: 3rem;
         color: #a78bfa;
@@ -187,67 +233,67 @@ def render_login_page():
         background: linear-gradient(90deg, transparent, #38bdf8, transparent);
         margin: 20px auto;
     }
-
-    /* Login card */
     .login-card {
-        position: relative;
+        animation: slideUp 0.7s ease-out 1.8s both;
         background: linear-gradient(145deg,
-            rgba(12,18,30,0.92) 0%,
-            rgba(10,14,24,0.95) 100%);
+            rgba(12,18,30,0.94) 0%,
+            rgba(10,14,24,0.97) 100%);
         border: 1px solid rgba(56,189,248,0.2);
         border-radius: 18px;
-        padding: 36px 32px 28px;
-        width: 100%;
-        max-width: 380px;
+        padding: 32px 28px;
         box-shadow:
             0 24px 64px rgba(0,0,0,0.6),
-            0 0 0 1px rgba(56,189,248,0.06),
             inset 0 1px 0 rgba(56,189,248,0.08);
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        text-align: center;
-        z-index: 1;
     }
-
-    /* Streamlit input styling on login page */
-    .login-card input {
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(56,189,248,0.15) !important;
-        border-radius: 8px !important;
-        color: #e0e0f0 !important;
-        font-size: 14px !important;
+    .google-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        padding: 13px 20px;
+        background: #ffffff;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 500;
+        color: #1a1a2e;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        margin-top: 8px;
     }
-    .login-card input:focus {
-        border-color: rgba(56,189,248,0.4) !important;
-        box-shadow: 0 0 0 2px rgba(56,189,248,0.08) !important;
+    .google-btn:hover {
+        background: #f5f5f5;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        transform: translateY(-1px);
     }
-
-    /* Primary button */
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #1a4a7a, #1e3a5f) !important;
-        border: 1px solid rgba(56,189,248,0.35) !important;
-        color: #38bdf8 !important;
-        border-radius: 10px !important;
-        font-size: 14px !important;
-        padding: 10px !important;
-        letter-spacing: 0.04em !important;
-        transition: all 0.2s !important;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background: linear-gradient(135deg, #1e5a94, #244870) !important;
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 16px rgba(56,189,248,0.2) !important;
+    .google-logo {
+        width: 20px;
+        height: 20px;
     }
     </style>
 
-    <!-- Splash background: waveform + orbs -->
-    <div class="splash">
-      <div class="orb"></div>
-      <div class="orb2"></div>
+    <!-- Background: orbs + waveform -->
+    <div style="position:fixed;inset:0;background:#07080f;z-index:0;overflow:hidden;pointer-events:none">
 
-      <!-- Animated waveform SVG — two copies side by side for seamless scroll -->
-      <svg class="wave-bg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"
-           xmlns="http://www.w3.org/2000/svg">
+      <!-- Orb 1 -->
+      <div style="position:absolute;width:540px;height:540px;border-radius:50%;
+          background:radial-gradient(circle,rgba(56,189,248,0.2) 0%,rgba(167,139,250,0.08) 45%,transparent 70%);
+          filter:blur(52px);top:50%;left:50%;transform:translate(-50%,-50%);
+          animation:orbPulse 6s ease-in-out infinite"></div>
+
+      <!-- Orb 2 -->
+      <div style="position:absolute;width:300px;height:300px;border-radius:50%;
+          background:radial-gradient(circle,rgba(167,139,250,0.16) 0%,transparent 65%);
+          filter:blur(40px);top:calc(50% - 80px);left:calc(50% + 60px);
+          animation:orbPulse2 8s ease-in-out infinite"></div>
+
+      <!-- Waveform SVG -->
+      <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.15"
+           viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id="wg1" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stop-color="#38bdf8" stop-opacity="0"/>
@@ -257,12 +303,11 @@ def render_login_page():
           </linearGradient>
           <linearGradient id="wg2" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0"/>
-            <stop offset="20%"  stop-color="#a78bfa" stop-opacity="0.6"/>
-            <stop offset="80%"  stop-color="#34d399" stop-opacity="0.6"/>
-            <stop offset="100%" stop-color="#34d399" stop-opacity="0"/>
+            <stop offset="25%"  stop-color="#34d399" stop-opacity="0.5"/>
+            <stop offset="75%"  stop-color="#38bdf8" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
           </linearGradient>
         </defs>
-        <!-- Main waveform line -->
         <path d="M-100,450 L80,450 L100,420 L120,390 L140,450 L180,450
                  L200,410 L220,370 L240,310 L260,380 L280,420 L300,450
                  L340,450 L360,430 L380,395 L400,450 L440,450
@@ -271,35 +316,33 @@ def render_login_page():
                  L800,450 L820,410 L840,370 L860,420 L880,450
                  L920,450 L940,430 L960,380 L980,320 L1000,390 L1020,430 L1040,450
                  L1080,450 L1100,420 L1120,400 L1140,450 L1180,450
-                 L1200,410 L1220,360 L1240,310 L1260,370 L1280,420 L1300,450
-                 L1440,450 L1540,450"
+                 L1200,410 L1220,360 L1240,310 L1260,370 L1280,420 L1300,450 L1540,450"
               fill="none" stroke="url(#wg1)" stroke-width="1.5"
-              stroke-dasharray="2000" stroke-dashoffset="2000"
-              style="animation: waveDraw 3s ease-out 0.3s forwards"/>
-        <!-- Secondary softer line offset vertically -->
-        <path d="M-100,490 L80,490 L110,460 L130,430 L150,490 L190,490
-                 L210,450 L230,410 L250,370 L270,440 L290,480 L310,490
-                 L350,490 L370,465 L390,440 L420,490 L460,490
-                 L480,445 L500,390 L520,340 L540,260 L560,350 L580,420 L600,470 L620,490
-                 L660,490 L680,460 L700,430 L720,400 L740,445 L760,480 L780,490
-                 L820,490 L840,450 L860,420 L880,465 L910,490
-                 L950,490 L970,465 L990,420 L1010,360 L1030,430 L1050,475 L1070,490
-                 L1110,490 L1130,455 L1150,430 L1170,490
-                 L1220,490 L1250,445 L1270,390 L1300,450 L1330,480 L1360,490 L1440,490"
+              stroke-dasharray="2400" stroke-dashoffset="2400"
+              style="animation:waveDraw 3s ease-out 0.2s forwards"/>
+        <path d="M-100,480 L100,480 L130,450 L160,410 L180,480 L220,480
+                 L250,440 L280,390 L310,340 L340,410 L370,465 L400,480
+                 L440,480 L470,450 L500,400 L530,350 L560,270 L590,360 L620,430 L650,475 L680,480
+                 L720,480 L750,445 L780,410 L810,455 L840,478 L870,480
+                 L910,480 L940,445 L970,400 L1000,350 L1030,420 L1060,468 L1090,480
+                 L1130,480 L1160,448 L1190,415 L1220,460 L1260,480
+                 L1300,480 L1330,440 L1360,390 L1400,450 L1440,480"
               fill="none" stroke="url(#wg2)" stroke-width="1"
-              stroke-dasharray="2000" stroke-dashoffset="2000"
-              style="animation: waveDraw 3.5s ease-out 0.8s forwards; opacity:0.5"/>
+              stroke-dasharray="2400" stroke-dashoffset="2400"
+              style="animation:waveDraw 3.8s ease-out 0.6s forwards;opacity:0.5"/>
       </svg>
     </div>
     """, unsafe_allow_html=True)
 
-    # Centered login card using Streamlit columns
-    _, col, _ = st.columns([1, 1.4, 1])
+    # Centered content
+    _, col, _ = st.columns([1, 1.2, 1])
 
     with col:
-        # Logo section
+        # Logo — fades in first
         st.markdown("""
-        <div style="text-align:center; padding-top: 80px; margin-bottom: 32px; position:relative; z-index:2;">
+        <div style="text-align:center;padding-top:100px;margin-bottom:36px;
+            position:relative;z-index:2;
+            animation:slideUp 0.6s ease-out 0.5s both;">
           <span class="splash-diamond">◆</span>
           <div class="splash-title">BioSense</div>
           <div class="splash-sub">Predictive Lab Analytics</div>
@@ -307,61 +350,43 @@ def render_login_page():
         </div>
         """, unsafe_allow_html=True)
 
-        # Login form
+        # Login card — slides up after logo
+        st.markdown('<div class="login-card" style="position:relative;z-index:2">', unsafe_allow_html=True)
+
         st.markdown("""
-        <div style="position:relative;z-index:2;
-            background:linear-gradient(145deg,rgba(12,18,30,0.92),rgba(10,14,24,0.95));
-            border:1px solid rgba(56,189,248,0.2);border-radius:18px;
-            padding:28px 24px 8px;
-            box-shadow:0 24px 64px rgba(0,0,0,0.6),inset 0 1px 0 rgba(56,189,248,0.08);
-            backdrop-filter:blur(20px);">
-          <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.18em;
-              color:#38bdf8;margin:0 0 20px;text-align:center">
-            Sign in to your account
-          </p>
-        </div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.18em;
+            color:#38bdf8;margin:0 0 20px;text-align:center">
+          Sign in to continue
+        </p>
         """, unsafe_allow_html=True)
 
-        email = st.text_input(
-            "Email address",
-            placeholder="you@company.com",
-            key="login_email",
-        )
-        password = st.text_input(
-            "Password",
-            type="password",
-            placeholder="••••••••",
-            key="login_password",
-        )
+        # Google sign-in button
+        auth_url = get_google_auth_url()
+        st.markdown(f"""
+        <a href="{auth_url}" class="google-btn">
+          <svg class="google-logo" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </a>
+        """, unsafe_allow_html=True)
 
-        if "login_error" not in st.session_state:
-            st.session_state.login_error = ""
-
-        if st.button("Sign in →", use_container_width=True, type="primary", key="login_btn"):
-            if not email or not password:
-                st.session_state.login_error = "Enter your email and password."
-            else:
-                user = check_credentials(email, password)
-                if user:
-                    st.session_state.auth_user = user
-                    st.session_state.login_error = ""
-                    st.session_state.tour_done = False
-                    st.session_state.tour_step = 0
-                    st.rerun()
-                else:
-                    st.session_state.login_error = "Incorrect email or password."
-
-        if st.session_state.login_error:
+        # Error message
+        if st.session_state.auth_error:
             st.markdown(f"""
             <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);
-                border-radius:8px;padding:10px 14px;margin-top:8px;
-                font-size:13px;color:#ef4444;text-align:center">
-              {st.session_state.login_error}
+                border-radius:8px;padding:10px 14px;margin-top:14px;
+                font-size:13px;color:#ef4444;text-align:center;line-height:1.5">
+              {st.session_state.auth_error}
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown("""
-        <p style="text-align:center;font-size:11px;color:#2a3a4a;margin-top:20px;padding-bottom:40px">
-          Need access? Contact sara@biosense.app
+        <p style="text-align:center;font-size:11px;color:#1e2a3a;margin-top:20px">
+          Access is by invite only
         </p>
+        </div>
         """, unsafe_allow_html=True)

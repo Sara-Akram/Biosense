@@ -12,7 +12,7 @@ from data_generator import generate_bioreactor_data
 from correlation import analyze_correlations, detect_correlated_drifts
 from sklearn.ensemble import IsolationForest
 from assistant import get_response, SUGGESTED_QUESTIONS
-from auth import is_logged_in, render_login_page, get_current_user, logout
+from auth import is_logged_in, render_login_page, get_current_user, logout, handle_oauth_callback
 
 
 # ── Page config ──────────────────────────────────────────────
@@ -23,7 +23,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Login gate — must be before any other rendering ──────────
+# ── Handle Google OAuth callback first ───────────────────────
+handle_oauth_callback()
+
+# ── Login gate ───────────────────────────────────────────────
 if not is_logged_in():
     render_login_page()
     st.stop()
@@ -31,9 +34,11 @@ if not is_logged_in():
 # ── Logged-in user badge ──────────────────────────────────────
 user = get_current_user()
 if user:
+    pic = f"<img src='{user['picture']}' style='width:26px;height:26px;border-radius:50%;border:1px solid rgba(56,189,248,0.3)'>" if user.get('picture') else ""
     st.markdown(f"""
-    <div style="position:fixed;top:10px;right:16px;z-index:9999;
-        display:flex;align-items:center;gap:10px;">
+    <div style="position:fixed;top:10px;right:72px;z-index:9999;
+        display:flex;align-items:center;gap:8px;">
+      {pic}
       <span style="font-size:12px;color:#5a8ab5">{user['name']}</span>
     </div>
     """, unsafe_allow_html=True)
