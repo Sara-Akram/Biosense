@@ -278,13 +278,8 @@ def render_login_page():
         flex-shrink: 0;
     }
 
-    /* Splash sequence — JS controlled, works in iframes */
+    /* Splash sequence */
     .splash-logo {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-    }
-    .splash-logo.visible {
         opacity: 1;
         transform: translateY(0);
     }
@@ -357,20 +352,12 @@ def render_login_page():
     </div>
 
     <script>
-      // Trigger animations via JS — works inside Streamlit iframes
       (function() {
         function run() {
           var doc = window.parent.document;
-          var logo = doc.querySelector('.splash-logo');
           var card = doc.querySelector('.splash-card');
-          if (!logo || !card) {
-            setTimeout(run, 100);
-            return;
-          }
-          // Logo appears first
-          setTimeout(function() { logo.classList.add('visible'); }, 300);
-          // Card slides up after logo settles
-          setTimeout(function() { card.classList.add('visible'); }, 1800);
+          if (!card) { setTimeout(run, 100); return; }
+          setTimeout(function() { card.classList.add('visible'); }, 1400);
         }
         run();
       })();
