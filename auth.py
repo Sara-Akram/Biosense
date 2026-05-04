@@ -28,7 +28,7 @@ def get_google_auth_url() -> str:
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "offline",
-        "prompt": "select_account",
+        "prompt": "select_account consent",
     }
     base = "https://accounts.google.com/o/oauth2/v2/auth"
     return base + "?" + urllib.parse.urlencode(params)
@@ -278,20 +278,24 @@ def render_login_page():
         flex-shrink: 0;
     }
 
-    /* Splash sequence — logo first, card after delay */
-    @keyframes logoAppear {
-        from { opacity: 0; transform: translateY(20px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes cardSlideUp {
-        from { opacity: 0; transform: translateY(50px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
+    /* Splash sequence — JS controlled, works in iframes */
     .splash-logo {
-        animation: logoAppear 0.8s ease-out 0.4s both;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    .splash-logo.visible {
+        opacity: 1;
+        transform: translateY(0);
     }
     .splash-card {
-        animation: cardSlideUp 0.7s ease-out 2.2s both;
+        opacity: 0;
+        transform: translateY(50px);
+        transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+    .splash-card.visible {
+        opacity: 1;
+        transform: translateY(0);
     }
     </style>
 
@@ -351,6 +355,26 @@ def render_login_page():
               style="animation:waveDraw 3.8s ease-out 0.6s forwards;opacity:0.5"/>
       </svg>
     </div>
+
+    <script>
+      // Trigger animations via JS — works inside Streamlit iframes
+      (function() {
+        function run() {
+          var doc = window.parent.document;
+          var logo = doc.querySelector('.splash-logo');
+          var card = doc.querySelector('.splash-card');
+          if (!logo || !card) {
+            setTimeout(run, 100);
+            return;
+          }
+          // Logo appears first
+          setTimeout(function() { logo.classList.add('visible'); }, 300);
+          // Card slides up after logo settles
+          setTimeout(function() { card.classList.add('visible'); }, 1800);
+        }
+        run();
+      })();
+    </script>
     """, unsafe_allow_html=True)
 
     # Centered content
