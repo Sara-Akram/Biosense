@@ -31,17 +31,150 @@ if not is_logged_in():
     render_login_page()
     st.stop()
 
-# ── Logged-in user badge ──────────────────────────────────────
+# ── Logged-in user badge + dropdown ──────────────────────────
 user = get_current_user()
 if user:
-    pic = f"<img src='{user['picture']}' style='width:26px;height:26px;border-radius:50%;border:1px solid rgba(56,189,248,0.3)'>" if user.get('picture') else ""
+    pic = user.get('picture', '')
+    pic_html = f"<img src='{pic}' style='width:30px;height:30px;border-radius:50%;border:1px solid rgba(56,189,248,0.3);display:block'>" if pic else f"<div style='width:30px;height:30px;border-radius:50%;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;color:#38bdf8'>{user['name'][0].upper()}</div>"
+
     st.markdown(f"""
-    <div style="position:fixed;top:10px;right:72px;z-index:9999;
-        display:flex;align-items:center;gap:8px;">
-      {pic}
-      <span style="font-size:12px;color:#5a8ab5">{user['name']}</span>
+    <style>
+    .user-menu-wrap {{
+        position: fixed;
+        top: 10px;
+        right: 72px;
+        z-index: 99999;
+    }}
+    .user-trigger {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 4px 10px 4px 4px;
+        border-radius: 20px;
+        background: rgba(56,189,248,0.05);
+        border: 1px solid rgba(56,189,248,0.12);
+        transition: all 0.15s;
+        user-select: none;
+    }}
+    .user-trigger:hover {{
+        background: rgba(56,189,248,0.1);
+        border-color: rgba(56,189,248,0.25);
+    }}
+    .user-trigger span {{
+        font-size: 12px;
+        color: #7ab3d4;
+        font-family: system-ui, sans-serif;
+    }}
+    .user-dropdown {{
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        min-width: 200px;
+        background: linear-gradient(145deg, #0f1824, #0c1520);
+        border: 1px solid rgba(56,189,248,0.2);
+        border-radius: 12px;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+        overflow: hidden;
+        animation: dropIn 0.15s ease-out;
+    }}
+    @keyframes dropIn {{
+        from {{ opacity:0; transform:translateY(-6px); }}
+        to   {{ opacity:1; transform:translateY(0); }}
+    }}
+    .user-menu-wrap:focus-within .user-dropdown,
+    .user-menu-wrap.open .user-dropdown {{
+        display: block;
+    }}
+    .user-info {{
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(56,189,248,0.08);
+    }}
+    .user-info-name {{
+        font-size: 13px;
+        font-weight: 500;
+        color: #e0e0f0;
+        font-family: system-ui, sans-serif;
+        margin: 0 0 2px;
+    }}
+    .user-info-email {{
+        font-size: 11px;
+        color: #4a6a8a;
+        font-family: system-ui, sans-serif;
+        margin: 0;
+    }}
+    .menu-item {{
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 16px;
+        font-size: 13px;
+        color: #a0b8cc;
+        font-family: system-ui, sans-serif;
+        cursor: pointer;
+        transition: background 0.1s;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        text-decoration: none;
+    }}
+    .menu-item:hover {{
+        background: rgba(56,189,248,0.06);
+        color: #e0e0f0;
+    }}
+    .menu-item.danger {{
+        color: #ef4444;
+        border-top: 1px solid rgba(239,68,68,0.1);
+    }}
+    .menu-item.danger:hover {{
+        background: rgba(239,68,68,0.06);
+    }}
+    </style>
+
+    <div class="user-menu-wrap" id="userMenuWrap">
+      <div class="user-trigger" onclick="toggleMenu()">
+        {pic_html}
+        <span>{user['name']}</span>
+        <span style="color:#38bdf8;font-size:10px">▾</span>
+      </div>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="user-info">
+          <p class="user-info-name">{user['name']}</p>
+          <p class="user-info-email">{user['email']}</p>
+        </div>
+        <a class="menu-item" href="https://github.com/Sara-Akram/Biosense" target="_blank">
+          ⬡ &nbsp;GitHub repo
+        </a>
+        <button class="menu-item danger" onclick="handleLogout()">
+          ↪ &nbsp;Sign out
+        </button>
+      </div>
     </div>
+
+    <script>
+    function toggleMenu() {{
+        var wrap = window.parent.document.getElementById('userMenuWrap');
+        if (wrap) wrap.classList.toggle('open');
+    }}
+    // Close when clicking outside
+    window.parent.document.addEventListener('click', function(e) {{
+        var wrap = window.parent.document.getElementById('userMenuWrap');
+        if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
+    }});
+    function handleLogout() {{
+        // Set a flag then trigger Streamlit rerun via URL param
+        window.parent.location.href = window.parent.location.pathname + '?logout=1';
+    }}
+    </script>
     """, unsafe_allow_html=True)
+
+    # Handle logout from URL param
+    if st.query_params.get("logout") == "1":
+        st.query_params.clear()
+        logout()
+
 
 # ── Dark theme CSS ───────────────────────────────────────────
 st.markdown("""
