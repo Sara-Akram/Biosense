@@ -12,6 +12,7 @@ from data_generator import generate_bioreactor_data
 from correlation import analyze_correlations, detect_correlated_drifts
 from sklearn.ensemble import IsolationForest
 from assistant import get_response, SUGGESTED_QUESTIONS
+from auth import is_logged_in, render_login_page, get_current_user, logout
 
 
 # ── Page config ──────────────────────────────────────────────
@@ -21,6 +22,21 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Login gate — must be before any other rendering ──────────
+if not is_logged_in():
+    render_login_page()
+    st.stop()
+
+# ── Logged-in user badge ──────────────────────────────────────
+user = get_current_user()
+if user:
+    st.markdown(f"""
+    <div style="position:fixed;top:10px;right:16px;z-index:9999;
+        display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:#5a8ab5">{user['name']}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ── Dark theme CSS ───────────────────────────────────────────
 st.markdown("""
@@ -803,6 +819,10 @@ if st.session_state.show_settings:
     if st.button("Close Settings ✕", use_container_width=True):
         st.session_state.show_settings = False
         st.rerun()
+
+    st.divider()
+    if st.button("Sign out", use_container_width=True):
+        logout()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
