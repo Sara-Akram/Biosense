@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from data_generator import generate_bioreactor_data
 from correlation import analyze_correlations, detect_correlated_drifts
 from sklearn.ensemble import IsolationForest
+from assistant import get_response, SUGGESTED_QUESTIONS
 
 
 # ── Page config ──────────────────────────────────────────────
@@ -443,71 +444,79 @@ if not st.session_state.tour_done:
     step = st.session_state.tour_step
     total = len(TOUR_STEPS)
     s = TOUR_STEPS[step]
-    progress_pct = int((step / (total - 1)) * 100) if total > 1 else 100
+    progress_pct = int(((step + 1) / total) * 100)
 
-    st.markdown(f"""
+    # Dim the rest of the page with a fixed overlay (buttons sit on top via z-index)
+    st.markdown("""
     <style>
-    .tour-overlay {{
+    .tour-dim {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(5,5,15,0.82);
-        z-index: 99990;
-        backdrop-filter: blur(3px);
-        -webkit-backdrop-filter: blur(3px);
-    }}
-    .tour-card {{
-        position: fixed;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 99991;
-        background: linear-gradient(145deg, #0f1520, #111827);
-        border: 1px solid rgba(56,189,248,0.3);
-        border-radius: 16px;
-        padding: 32px 36px;
-        width: min(480px, 88vw);
-        box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-    }}
-    .tour-buttons {{
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, 110px);
-        z-index: 99992;
-        display: flex;
-        gap: 12px;
-        width: min(480px, 88vw);
-    }}
+        background: rgba(5,5,15,0.85);
+        z-index: 9990;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        pointer-events: none;
+    }
+    /* Keep the tour card and buttons clickable above the dim layer */
+    .tour-wrap, .tour-wrap + div [data-testid="stHorizontalBlock"] {
+        position: relative;
+        z-index: 9999 !important;
+    }
     </style>
-    <div class="tour-overlay"></div>
-    <div class="tour-card">
-      <div style="font-size:2rem;margin-bottom:12px">{s['icon']}</div>
+    <div class="tour-dim"></div>
+    """, unsafe_allow_html=True)
+
+    # Tour card — rendered inline at top of page so buttons sit right below it
+    st.markdown(f"""
+    <div class="tour-wrap" style="
+        max-width: 520px;
+        margin: 40px auto 0;
+        background: linear-gradient(145deg, #0f1520, #111827);
+        border: 1px solid rgba(56,189,248,0.35);
+        border-radius: 16px;
+        padding: 28px 32px 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    ">
+      <div style="font-size:2rem;margin-bottom:10px">{s['icon']}</div>
       <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#38bdf8;margin:0 0 8px">
         Step {step + 1} of {total}
       </p>
       <h2 style="font-size:1.3rem;font-weight:500;color:#ffffff;margin:0 0 12px">{s['title']}</h2>
-      <p style="font-size:14px;color:#a0b8cc;line-height:1.7;margin:0 0 24px">{s['body']}</p>
-      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
-        <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px"></div>
+      <p style="font-size:14px;color:#a0b8cc;line-height:1.7;margin:0 0 18px">{s['body']}</p>
+      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;margin-bottom:4px">
+        <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px;transition:width 0.4s"></div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
-    col_skip, col_next = st.columns(2)
-    with col_skip:
-        if st.button("Skip tour", use_container_width=True, key="tour_skip"):
-            st.session_state.tour_done = True
-            st.rerun()
-    with col_next:
-        label = "Finish  ✓" if step == total - 1 else "Next →"
-        if st.button(label, use_container_width=True, key="tour_next"):
-            if step < total - 1:
-                st.session_state.tour_step += 1
-                st.rerun()
-            else:
+    # Buttons — placed in a centered narrow container right under the card
+    btn_left, btn_mid, btn_right = st.columns([1, 3, 1])
+    with btn_mid:
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            if st.button("Skip tour", use_container_width=True, key="tour_skip"):
                 st.session_state.tour_done = True
                 st.rerun()
+        with c2:
+            if step > 0:
+                if st.button("← Back", use_container_width=True, key="tour_back"):
+                    st.session_state.tour_step -= 1
+                    st.rerun()
+            else:
+                st.markdown("&nbsp;", unsafe_allow_html=True)
+        with c3:
+            label = "Finish ✓" if step == total - 1 else "Next →"
+            if st.button(label, use_container_width=True, key="tour_next"):
+                if step < total - 1:
+                    st.session_state.tour_step += 1
+                    st.rerun()
+                else:
+                    st.session_state.tour_done = True
+                    st.rerun()
 
-    st.markdown("<div style='margin-bottom:200px'></div>", unsafe_allow_html=True)
+    # Stop rendering rest of the app while tour is active — cleaner experience
+    st.stop()
 
 
 # ── Sidebar (alert settings only) ────────────────────────────
@@ -1358,3 +1367,180 @@ else:
         st.markdown("<div style='padding:60px 20px;text-align:center'>"
                     "<p style='color:#4a4a6a;font-size:16px'>Upload a CSV to begin analysis</p>"
                     "</div>", unsafe_allow_html=True)
+
+
+# ── Floating Assistant Chat ──────────────────────────────────
+if "chat_open" not in st.session_state:
+    st.session_state.chat_open = False
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Floating button (always visible bottom-right)
+st.markdown("""
+<style>
+.chat-bubble-anchor {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9998;
+}
+/* Style the button that follows the anchor */
+div[data-testid="stButton"] button[kind="primary"]#assistant-toggle,
+button[data-testid="baseButton-secondary"]:has(span:contains("💬")) {
+    border-radius: 50% !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Use a column trick to push the button to the right edge
+chat_spacer, chat_btn_col = st.columns([10, 1])
+with chat_btn_col:
+    btn_label = "✕ Close" if st.session_state.chat_open else "💬 Help"
+    if st.button(btn_label, key="chat_toggle", use_container_width=True):
+        st.session_state.chat_open = not st.session_state.chat_open
+        st.rerun()
+
+# Chat panel
+if st.session_state.chat_open:
+    st.markdown("""
+    <style>
+    .chat-panel {
+        position: fixed;
+        bottom: 90px;
+        right: 24px;
+        width: min(400px, 92vw);
+        max-height: 70vh;
+        background: linear-gradient(145deg, #0f1520, #111827);
+        border: 1px solid rgba(56,189,248,0.3);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        z-index: 9997;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(56,189,248,0.15);
+        background: rgba(56,189,248,0.04);
+    }
+    .chat-header-title {
+        font-size: 15px;
+        font-weight: 500;
+        color: #ffffff;
+        margin: 0;
+    }
+    .chat-header-sub {
+        font-size: 11px;
+        color: #5a8ab5;
+        margin: 4px 0 0;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+    .chat-body {
+        padding: 16px 20px;
+        overflow-y: auto;
+        flex: 1;
+        max-height: 50vh;
+    }
+    .chat-msg-user {
+        background: rgba(56,189,248,0.12);
+        border: 1px solid rgba(56,189,248,0.25);
+        border-radius: 12px 12px 4px 12px;
+        padding: 10px 14px;
+        margin: 8px 0 8px 40px;
+        font-size: 13px;
+        color: #e0e0f0;
+        line-height: 1.5;
+    }
+    .chat-msg-bot {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px 12px 12px 4px;
+        padding: 10px 14px;
+        margin: 8px 40px 8px 0;
+        font-size: 13px;
+        color: #c0d0e0;
+        line-height: 1.6;
+    }
+    .chat-suggested {
+        font-size: 11px;
+        color: #5a8ab5;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin: 8px 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Render the chat panel container
+    with st.container():
+        st.markdown("""
+        <div style="
+            background: linear-gradient(145deg, #0f1520, #111827);
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-top: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        ">
+          <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#38bdf8;margin:0 0 4px">
+            BioSense Assistant
+          </p>
+          <p style="font-size:13px;color:#a0b8cc;margin:0">
+            Ask me anything about how to use the dashboard
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Display chat history
+        if st.session_state.chat_history:
+            for msg in st.session_state.chat_history:
+                if msg["role"] == "user":
+                    st.markdown(f"""
+                    <div style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);
+                        border-radius:12px 12px 4px 12px;padding:10px 14px;margin:10px 0 10px 60px;
+                        font-size:13px;color:#e0e0f0;line-height:1.5">{msg['text']}</div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+                        border-radius:12px 12px 12px 4px;padding:10px 14px;margin:10px 60px 10px 0;
+                        font-size:13px;color:#c0d0e0;line-height:1.6">{msg['text']}</div>
+                    """, unsafe_allow_html=True)
+        else:
+            # Show suggested questions when empty
+            st.markdown("""
+            <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;
+                color:#5a8ab5;margin:16px 0 8px">Try asking</p>
+            """, unsafe_allow_html=True)
+
+            for i, q in enumerate(SUGGESTED_QUESTIONS):
+                if st.button(q, key=f"suggested_{i}", use_container_width=True):
+                    st.session_state.chat_history.append({"role": "user", "text": q})
+                    st.session_state.chat_history.append({"role": "bot", "text": get_response(q)})
+                    st.rerun()
+
+        # Input form
+        with st.form(key="chat_form", clear_on_submit=True):
+            col_input, col_send = st.columns([4, 1])
+            with col_input:
+                user_question = st.text_input(
+                    "Ask",
+                    placeholder="Type your question...",
+                    label_visibility="collapsed",
+                    key="chat_input"
+                )
+            with col_send:
+                submitted = st.form_submit_button("Send", use_container_width=True)
+
+            if submitted and user_question.strip():
+                st.session_state.chat_history.append({"role": "user", "text": user_question})
+                st.session_state.chat_history.append({"role": "bot", "text": get_response(user_question)})
+                st.rerun()
+
+        # Clear button
+        if st.session_state.chat_history:
+            if st.button("Clear chat", key="chat_clear", use_container_width=True):
+                st.session_state.chat_history = []
+                st.rerun()
