@@ -87,6 +87,9 @@ if user:
     .user-menu-wrap.open .user-dropdown {{
         display: block;
     }}
+    .user-trigger:focus {{
+        outline: none;
+    }}
     .user-info {{
         padding: 14px 16px;
         border-bottom: 1px solid rgba(56,189,248,0.08);
@@ -134,7 +137,7 @@ if user:
     </style>
 
     <div class="user-menu-wrap" id="userMenuWrap">
-      <div class="user-trigger" onclick="toggleMenu()">
+      <div class="user-trigger" tabindex="0" onclick="this.focus()">
         {pic_html}
         <span>{user['name']}</span>
         <span style="color:#38bdf8;font-size:10px">▾</span>
@@ -154,17 +157,15 @@ if user:
     </div>
 
     <script>
-    function toggleMenu() {{
-        var wrap = window.parent.document.getElementById('userMenuWrap');
-        if (wrap) wrap.classList.toggle('open');
-    }}
-    // Close when clicking outside
+    // Close dropdown when clicking outside
     window.parent.document.addEventListener('click', function(e) {{
         var wrap = window.parent.document.getElementById('userMenuWrap');
-        if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
+        if (wrap && !wrap.contains(e.target)) {{
+            var trigger = wrap.querySelector('.user-trigger');
+            if (trigger) trigger.blur();
+        }}
     }});
     function handleLogout() {{
-        // Set a flag then trigger Streamlit rerun via URL param
         window.parent.location.href = window.parent.location.pathname + '?logout=1';
     }}
     </script>
