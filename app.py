@@ -446,68 +446,52 @@ if not st.session_state.tour_done:
     s = TOUR_STEPS[step]
     progress_pct = int(((step + 1) / total) * 100)
 
-    # Dim the rest of the page with a fixed overlay (buttons sit on top via z-index)
-    st.markdown("""
-    <style>
-    .tour-dim {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(5,5,15,0.85);
-        z-index: 9990;
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        pointer-events: none;
-    }
-    /* Keep the tour card and buttons clickable above the dim layer */
-    .tour-wrap, .tour-wrap + div [data-testid="stHorizontalBlock"] {
-        position: relative;
-        z-index: 9999 !important;
-    }
-    </style>
-    <div class="tour-dim"></div>
-    """, unsafe_allow_html=True)
-
-    # Tour card — rendered inline at top of page so buttons sit right below it
+    # Center the tour card vertically on the page — no overlay, no fixed positioning
     st.markdown(f"""
-    <div class="tour-wrap" style="
+    <div style="
         max-width: 520px;
-        margin: 40px auto 0;
+        margin: 80px auto 24px;
         background: linear-gradient(145deg, #0f1520, #111827);
         border: 1px solid rgba(56,189,248,0.35);
         border-radius: 16px;
-        padding: 28px 32px 24px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        padding: 32px 36px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
     ">
-      <div style="font-size:2rem;margin-bottom:10px">{s['icon']}</div>
+      <div style="font-size:2rem;margin-bottom:12px">{s['icon']}</div>
       <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#38bdf8;margin:0 0 8px">
         Step {step + 1} of {total}
       </p>
-      <h2 style="font-size:1.3rem;font-weight:500;color:#ffffff;margin:0 0 12px">{s['title']}</h2>
-      <p style="font-size:14px;color:#a0b8cc;line-height:1.7;margin:0 0 18px">{s['body']}</p>
-      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;margin-bottom:4px">
+      <h2 style="font-size:1.4rem;font-weight:500;color:#ffffff;margin:0 0 14px">{s['title']}</h2>
+      <p style="font-size:14px;color:#a0b8cc;line-height:1.7;margin:0 0 20px">{s['body']}</p>
+      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
         <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px;transition:width 0.4s"></div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Buttons — placed in a centered narrow container right under the card
-    btn_left, btn_mid, btn_right = st.columns([1, 3, 1])
+    # Buttons in a centered narrow column under the card
+    btn_left, btn_mid, btn_right = st.columns([2, 3, 2])
     with btn_mid:
-        c1, c2, c3 = st.columns([1, 1, 1])
+        if step > 0:
+            c1, c2, c3 = st.columns(3)
+        else:
+            c1, c3 = st.columns(2)
+            c2 = None
+
         with c1:
-            if st.button("Skip tour", use_container_width=True, key="tour_skip"):
+            if st.button("Skip", use_container_width=True, key="tour_skip"):
                 st.session_state.tour_done = True
                 st.rerun()
-        with c2:
-            if step > 0:
+
+        if c2 is not None:
+            with c2:
                 if st.button("← Back", use_container_width=True, key="tour_back"):
                     st.session_state.tour_step -= 1
                     st.rerun()
-            else:
-                st.markdown("&nbsp;", unsafe_allow_html=True)
+
         with c3:
             label = "Finish ✓" if step == total - 1 else "Next →"
-            if st.button(label, use_container_width=True, key="tour_next"):
+            if st.button(label, use_container_width=True, key="tour_next", type="primary"):
                 if step < total - 1:
                     st.session_state.tour_step += 1
                     st.rerun()
@@ -515,7 +499,7 @@ if not st.session_state.tour_done:
                     st.session_state.tour_done = True
                     st.rerun()
 
-    # Stop rendering rest of the app while tour is active — cleaner experience
+    # Stop everything else from rendering during tour
     st.stop()
 
 
