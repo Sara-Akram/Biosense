@@ -320,24 +320,50 @@ st.markdown("""
         margin-top: 8px;
     }
 
-    /* ? help button — small circular icon next to section headings */
-    [data-testid="stPopover"] button {
-        background: rgba(56,189,248,0.08) !important;
-        border: 1px solid rgba(56,189,248,0.25) !important;
-        color: #38bdf8 !important;
-        border-radius: 50% !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-height: 28px !important;
-        padding: 0 !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        margin-top: 28px !important;
+    /* Section heading ? button — circular icon that toggles help */
+    /* Targets buttons that contain only the text "?" */
+    div[data-testid="stButton"] button p {
+        margin: 0;
     }
-    [data-testid="stPopover"] button:hover {
-        background: rgba(56,189,248,0.18) !important;
-        border-color: rgba(56,189,248,0.5) !important;
-    }
+</style>
+<script>
+  // Re-style any button whose label is just "?" — runs on every Streamlit rerun
+  function styleHelpButtons() {
+    const doc = window.parent.document;
+    const buttons = doc.querySelectorAll('button');
+    buttons.forEach(btn => {
+      const text = btn.innerText.trim();
+      if (text === '?' && !btn.dataset.helpStyled) {
+        btn.dataset.helpStyled = 'true';
+        btn.style.cssText = `
+          background: rgba(56,189,248,0.08) !important;
+          border: 1px solid rgba(56,189,248,0.3) !important;
+          color: #38bdf8 !important;
+          border-radius: 50% !important;
+          width: 32px !important;
+          height: 32px !important;
+          min-height: 32px !important;
+          padding: 0 !important;
+          font-size: 15px !important;
+          font-weight: 600 !important;
+          margin-top: 30px !important;
+          transition: all 0.15s ease !important;
+        `;
+        btn.addEventListener('mouseenter', () => {
+          btn.style.background = 'rgba(56,189,248,0.2)';
+          btn.style.borderColor = 'rgba(56,189,248,0.6)';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.background = 'rgba(56,189,248,0.08)';
+          btn.style.borderColor = 'rgba(56,189,248,0.3)';
+        });
+      }
+    });
+  }
+  // Run repeatedly since Streamlit re-renders DOM
+  setInterval(styleHelpButtons, 300);
+</script>
+<style>
     [data-testid="stSlider"] div[role="slider"] {
         background: #38bdf8 !important;
         border: 2px solid #0a0a0f !important;
@@ -483,15 +509,39 @@ def help_heading(title: str, anchor: str):
     Render a section heading with a clickable ? icon that reveals help text.
     Also renders the tour popup next to this section if it's the active step.
     """
+    # Track which help boxes are open
+    help_key = f"help_open_{anchor}"
+    if help_key not in st.session_state:
+        st.session_state[help_key] = False
+
     # Heading row with ? button
-    col_h, col_q = st.columns([10, 1])
+    col_h, col_q = st.columns([20, 1])
     with col_h:
         st.subheader(title)
     with col_q:
-        # Use popover for the ? icon (Streamlit 1.32+)
-        with st.popover("?", use_container_width=True):
-            st.markdown(f"**{title}**")
-            st.markdown(HELP_CONTENT.get(anchor, "No help available for this section yet."))
+        if st.button("?", key=f"help_btn_{anchor}"):
+            st.session_state[help_key] = not st.session_state[help_key]
+            st.rerun()
+
+    # Show help box if toggled on
+    if st.session_state[help_key]:
+        st.markdown(f"""
+        <div style="
+            background: rgba(56,189,248,0.06);
+            border: 1px solid rgba(56,189,248,0.25);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin: -8px 0 14px;
+            font-size: 13px;
+            color: #c0d0e0;
+            line-height: 1.65;
+        ">
+          <p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#38bdf8">
+            How to read this section
+          </p>
+          {HELP_CONTENT.get(anchor, "No help available for this section yet.")}
+        </div>
+        """, unsafe_allow_html=True)
 
     # If tour is active and this is the current step, show the tour popup right here
     if not st.session_state.tour_done:
@@ -510,32 +560,52 @@ def render_tour_popup():
     # Unique anchor id so JS can scroll to it
     anchor_id = f"tour-anchor-{step}"
 
+    # Render popup as a constrained-width floating card with a downward-pointing arrow
     st.markdown(f"""
     <div id="{anchor_id}" style="
-        background: linear-gradient(145deg, rgba(15,21,32,0.95), rgba(17,24,39,0.95));
-        border: 1px solid rgba(56,189,248,0.45);
+        max-width: 580px;
+        margin: 12px 0 24px;
+        background: linear-gradient(145deg, #0f1f33, #0d1828);
+        border: 2px solid #38bdf8;
         border-radius: 14px;
-        padding: 20px 24px;
-        margin: 8px 0 14px;
-        box-shadow: 0 10px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,248,0.08);
+        padding: 22px 26px 18px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 4px rgba(56,189,248,0.1), 0 0 24px rgba(56,189,248,0.25);
         position: relative;
-        scroll-margin-top: 80px;
+        scroll-margin-top: 100px;
+        animation: tourFadeIn 0.4s ease-out;
     ">
-      <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:#38bdf8;margin:0 0 6px">
-        Tour · Step {step + 1} of {total}
+      <!-- Pointing arrow -->
+      <div style="
+          position: absolute;
+          bottom: -10px;
+          left: 32px;
+          width: 18px;
+          height: 18px;
+          background: #0d1828;
+          border-right: 2px solid #38bdf8;
+          border-bottom: 2px solid #38bdf8;
+          transform: rotate(45deg);
+      "></div>
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#38bdf8;margin:0 0 8px;font-weight:600">
+        ◆ Tour · Step {step + 1} of {total}
       </p>
-      <h3 style="font-size:1.05rem;font-weight:500;color:#ffffff;margin:0 0 10px">{s['title']}</h3>
-      <p style="font-size:13px;color:#a0b8cc;line-height:1.65;margin:0 0 14px">{s['body']}</p>
+      <h3 style="font-size:1.1rem;font-weight:500;color:#ffffff;margin:0 0 10px">{s['title']}</h3>
+      <p style="font-size:13px;color:#a8c0d4;line-height:1.65;margin:0 0 16px">{s['body']}</p>
       <div style="height:3px;background:rgba(255,255,255,0.07);border-radius:2px">
-        <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px;transition:width 0.4s"></div>
+        <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px;transition:width 0.4s;box-shadow:0 0 8px rgba(56,189,248,0.5)"></div>
       </div>
     </div>
+    <style>
+      @keyframes tourFadeIn {{
+        from {{ opacity: 0; transform: translateY(-8px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+      }}
+    </style>
     <script>
       // Scroll the active tour popup into view (skip on step 0 — already at top)
       (function() {{
         const stepNum = {step};
         if (stepNum === 0) return;
-        // Wait briefly for the DOM to settle after Streamlit rerun
         setTimeout(function() {{
           const target = window.parent.document.getElementById("{anchor_id}");
           if (target) {{
@@ -546,11 +616,11 @@ def render_tour_popup():
     </script>
     """, unsafe_allow_html=True)
 
-    # Buttons in a tight row
+    # Buttons in a tight row, narrow width to match popup
     if step > 0:
-        c1, c2, c3, spacer = st.columns([1, 1, 1, 3])
+        c1, c2, c3, spacer = st.columns([1.2, 1.2, 1.2, 5])
     else:
-        c1, c3, spacer = st.columns([1, 1, 4])
+        c1, c3, spacer = st.columns([1.2, 1.2, 6.2])
         c2 = None
 
     with c1:
