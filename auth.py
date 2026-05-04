@@ -234,7 +234,6 @@ def render_login_page():
         margin: 20px auto;
     }
     .login-card {
-        animation: slideUp 0.7s ease-out 1.8s both;
         background: linear-gradient(145deg,
             rgba(12,18,30,0.94) 0%,
             rgba(10,14,24,0.97) 100%);
@@ -253,26 +252,46 @@ def render_login_page():
         gap: 12px;
         width: 100%;
         padding: 13px 20px;
-        background: #ffffff;
-        border: none;
+        background: linear-gradient(145deg, #0f1e35, #0d1828);
+        border: 1px solid rgba(56,189,248,0.3);
         border-radius: 10px;
         font-size: 15px;
-        font-weight: 500;
-        color: #1a1a2e;
+        font-weight: 400;
+        color: #e0e0f0;
         cursor: pointer;
         text-decoration: none;
         transition: all 0.2s;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(56,189,248,0.06);
         margin-top: 8px;
+        letter-spacing: 0.02em;
     }
     .google-btn:hover {
-        background: #f5f5f5;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        background: linear-gradient(145deg, #142540, #111f30);
+        border-color: rgba(56,189,248,0.55);
+        box-shadow: 0 4px 20px rgba(56,189,248,0.15);
         transform: translateY(-1px);
+        color: #ffffff;
     }
     .google-logo {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    /* Splash sequence — logo first, card after delay */
+    @keyframes logoAppear {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardSlideUp {
+        from { opacity: 0; transform: translateY(50px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .splash-logo {
+        animation: logoAppear 0.8s ease-out 0.4s both;
+    }
+    .splash-card {
+        animation: cardSlideUp 0.7s ease-out 2.2s both;
     }
     </style>
 
@@ -338,11 +357,10 @@ def render_login_page():
     _, col, _ = st.columns([1, 1.2, 1])
 
     with col:
-        # Logo — fades in first
+        # Logo — appears first
         st.markdown("""
-        <div style="text-align:center;padding-top:100px;margin-bottom:36px;
-            position:relative;z-index:2;
-            animation:slideUp 0.6s ease-out 0.5s both;">
+        <div class="splash-logo" style="text-align:center;padding-top:100px;margin-bottom:36px;
+            position:relative;z-index:2;">
           <span class="splash-diamond">◆</span>
           <div class="splash-title">BioSense</div>
           <div class="splash-sub">Predictive Lab Analytics</div>
@@ -350,8 +368,8 @@ def render_login_page():
         </div>
         """, unsafe_allow_html=True)
 
-        # Login card — slides up after logo
-        st.markdown('<div class="login-card" style="position:relative;z-index:2">', unsafe_allow_html=True)
+        # Login card — slides up after logo settles
+        st.markdown('<div class="splash-card login-card" style="position:relative;z-index:2">', unsafe_allow_html=True)
 
         st.markdown("""
         <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.18em;
