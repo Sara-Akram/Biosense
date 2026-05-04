@@ -405,6 +405,111 @@ st.markdown("""
 st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
 
 
+# ── First-time user tour ──────────────────────────────────────
+if "tour_done" not in st.session_state:
+    st.session_state.tour_done = False
+if "tour_step" not in st.session_state:
+    st.session_state.tour_step = 0
+
+TOUR_STEPS = [
+    {
+        "title": "Welcome to BioSense",
+        "body": "BioSense monitors your lab sensors in real time and uses ML to catch anomalies before they cause batch failures. This quick tour covers the key parts of the dashboard.",
+        "icon": "◆",
+    },
+    {
+        "title": "Choose your data source",
+        "body": "Use 'Simulated Demo' to explore with pre-built bioreactor data, or 'Upload CSV' to connect your own sensor files. Upload multiple files to compare equipment side by side.",
+        "icon": "📊",
+    },
+    {
+        "title": "Tune the ML engine",
+        "body": "Click the ☰ button (top right) to open settings. Adjust ML sensitivity, correlation window, and email alerts. Lower sensitivity = fewer false alarms.",
+        "icon": "☰",
+    },
+    {
+        "title": "Read the anomaly cards",
+        "body": "Each sensor tab shows a confidence score, anomaly type (spike, drift, dropout), and a predictive maintenance window — how long before the sensor breaches its normal range.",
+        "icon": "🔴",
+    },
+    {
+        "title": "Export your audit trail",
+        "body": "Scroll to the Event Log at the bottom. Every anomaly is timestamped and exportable as CSV — built to meet FDA 21 CFR Part 11 requirements.",
+        "icon": "📋",
+    },
+]
+
+if not st.session_state.tour_done:
+    step = st.session_state.tour_step
+    total = len(TOUR_STEPS)
+    s = TOUR_STEPS[step]
+    progress_pct = int((step / (total - 1)) * 100) if total > 1 else 100
+
+    st.markdown(f"""
+    <style>
+    .tour-overlay {{
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(5,5,15,0.82);
+        z-index: 99990;
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+    }}
+    .tour-card {{
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 99991;
+        background: linear-gradient(145deg, #0f1520, #111827);
+        border: 1px solid rgba(56,189,248,0.3);
+        border-radius: 16px;
+        padding: 32px 36px;
+        width: min(480px, 88vw);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    }}
+    .tour-buttons {{
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, 110px);
+        z-index: 99992;
+        display: flex;
+        gap: 12px;
+        width: min(480px, 88vw);
+    }}
+    </style>
+    <div class="tour-overlay"></div>
+    <div class="tour-card">
+      <div style="font-size:2rem;margin-bottom:12px">{s['icon']}</div>
+      <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#38bdf8;margin:0 0 8px">
+        Step {step + 1} of {total}
+      </p>
+      <h2 style="font-size:1.3rem;font-weight:500;color:#ffffff;margin:0 0 12px">{s['title']}</h2>
+      <p style="font-size:14px;color:#a0b8cc;line-height:1.7;margin:0 0 24px">{s['body']}</p>
+      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
+        <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px"></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_skip, col_next = st.columns(2)
+    with col_skip:
+        if st.button("Skip tour", use_container_width=True, key="tour_skip"):
+            st.session_state.tour_done = True
+            st.rerun()
+    with col_next:
+        label = "Finish  ✓" if step == total - 1 else "Next →"
+        if st.button(label, use_container_width=True, key="tour_next"):
+            if step < total - 1:
+                st.session_state.tour_step += 1
+                st.rerun()
+            else:
+                st.session_state.tour_done = True
+                st.rerun()
+
+    st.markdown("<div style='margin-bottom:200px'></div>", unsafe_allow_html=True)
+
+
 # ── Sidebar (alert settings only) ────────────────────────────
 # ── Default alert values ──────────────────────────────────────
 resend_api_key = None
