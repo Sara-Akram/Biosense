@@ -99,13 +99,14 @@ if user:
         font-weight: 500;
         color: #e0e0f0;
         font-family: system-ui, sans-serif;
-        margin: 0 0 2px;
+        margin: 0 0 4px;
     }}
     .user-info-email {{
         font-size: 11px;
         color: #4a6a8a;
         font-family: system-ui, sans-serif;
         margin: 0;
+        word-break: break-all;
     }}
     .menu-item {{
         display: flex;
@@ -147,9 +148,6 @@ if user:
           <p class="user-info-name">{user['name']}</p>
           <p class="user-info-email">{user['email']}</p>
         </div>
-        <a class="menu-item" href="https://github.com/Sara-Akram/Biosense" target="_blank">
-          ⬡ &nbsp;GitHub repo
-        </a>
         <button class="menu-item danger" onclick="handleLogout()">
           ↪ &nbsp;Sign out
         </button>
@@ -157,7 +155,6 @@ if user:
     </div>
 
     <script>
-    // Close dropdown when clicking outside
     window.parent.document.addEventListener('click', function(e) {{
         var wrap = window.parent.document.getElementById('userMenuWrap');
         if (wrap && !wrap.contains(e.target)) {{
@@ -166,12 +163,34 @@ if user:
         }}
     }});
     function handleLogout() {{
-        window.parent.location.href = window.parent.location.pathname + '?logout=1';
+        // Post a message to Streamlit to trigger logout
+        window.parent.postMessage({{type: 'biosense_logout'}}, '*');
     }}
     </script>
     """, unsafe_allow_html=True)
 
-    # Handle logout from URL param
+    # Listen for logout message via a hidden Streamlit button trick
+    if "do_logout" not in st.session_state:
+        st.session_state.do_logout = False
+
+    st.markdown("""
+    <script>
+    window.parent.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'biosense_logout') {
+            // Find and click the hidden logout button
+            var btns = window.parent.document.querySelectorAll('button');
+            btns.forEach(function(btn) {
+                if (btn.innerText.trim() === '__logout__') btn.click();
+            });
+        }
+    });
+    </script>
+    """, unsafe_allow_html=True)
+
+    if st.button("__logout__", key="hidden_logout_btn"):
+        logout()
+
+    # Handle logout from URL param (fallback)
     if st.query_params.get("logout") == "1":
         st.query_params.clear()
         logout()
@@ -473,6 +492,15 @@ st.markdown("""
     }
     [data-testid="stSlider"] [data-baseweb="slider"] {
         margin-top: 8px;
+    }
+
+    /* Hide the internal logout trigger button */
+    div[data-testid="stButton"]:has(button[data-testid="baseButton-secondary"]) {
+        position: absolute !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 1px !important;
+        height: 1px !important;
     }
 
     /* Section heading ? button — circular icon that toggles help */
