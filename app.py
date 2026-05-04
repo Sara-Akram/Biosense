@@ -319,6 +319,25 @@ st.markdown("""
     [data-testid="stSlider"] [data-baseweb="slider"] {
         margin-top: 8px;
     }
+
+    /* ? help button — small circular icon next to section headings */
+    [data-testid="stPopover"] button {
+        background: rgba(56,189,248,0.08) !important;
+        border: 1px solid rgba(56,189,248,0.25) !important;
+        color: #38bdf8 !important;
+        border-radius: 50% !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        margin-top: 28px !important;
+    }
+    [data-testid="stPopover"] button:hover {
+        background: rgba(56,189,248,0.18) !important;
+        border-color: rgba(56,189,248,0.5) !important;
+    }
     [data-testid="stSlider"] div[role="slider"] {
         background: #38bdf8 !important;
         border: 2px solid #0a0a0f !important;
@@ -406,101 +425,160 @@ st.markdown("""
 st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
 
 
-# ── First-time user tour ──────────────────────────────────────
+# ── Help system + first-time tour ────────────────────────────
 if "tour_done" not in st.session_state:
     st.session_state.tour_done = False
 if "tour_step" not in st.session_state:
     st.session_state.tour_step = 0
 
+# Tour steps — each one is anchored to a section in the dashboard.
+# When the user is on step N, a popup appears next to that section.
 TOUR_STEPS = [
     {
-        "title": "Welcome to BioSense",
-        "body": "BioSense monitors your lab sensors in real time and uses ML to catch anomalies before they cause batch failures. This quick tour covers the key parts of the dashboard.",
-        "icon": "◆",
+        "anchor": "data_source",
+        "title": "Choose your data",
+        "body": "Start here. Click 'Simulated Demo' to explore with built-in bioreactor data, or 'Upload CSV' for your own files. The ☰ button (top right) opens settings — ML sensitivity, correlation window, email alerts.",
     },
     {
-        "title": "Choose your data source",
-        "body": "Use 'Simulated Demo' to explore with pre-built bioreactor data, or 'Upload CSV' to connect your own sensor files. Upload multiple files to compare equipment side by side.",
-        "icon": "📊",
+        "anchor": "metrics",
+        "title": "Live sensor values",
+        "body": "These cards show the latest reading from each sensor. The 'Anomalies' card tells you how many issues were detected, and how many were correlated drifts (multiple sensors moving together).",
     },
     {
-        "title": "Tune the ML engine",
-        "body": "Click the ☰ button (top right) to open settings. Adjust ML sensitivity, correlation window, and email alerts. Lower sensitivity = fewer false alarms.",
-        "icon": "☰",
+        "anchor": "sensor_readings",
+        "title": "Sensor charts",
+        "body": "Each tab is one sensor. The shaded band is the normal range (mean ± 2 std dev). Red diamonds = detected anomalies. Below each chart you'll find a confidence card and a predictive maintenance window.",
     },
     {
-        "title": "Read the anomaly cards",
-        "body": "Each sensor tab shows a confidence score, anomaly type (spike, drift, dropout), and a predictive maintenance window — how long before the sensor breaches its normal range.",
-        "icon": "🔴",
+        "anchor": "anomaly_score",
+        "title": "ML anomaly score",
+        "body": "This is the raw output from the Isolation Forest model. Positive = normal. Negative = anomaly. The deeper into the negative, the more confident the model is something's wrong.",
     },
     {
-        "title": "Export your audit trail",
-        "body": "Scroll to the Event Log at the bottom. Every anomaly is timestamped and exportable as CSV — built to meet FDA 21 CFR Part 11 requirements.",
-        "icon": "📋",
+        "anchor": "correlation",
+        "title": "Correlation analysis",
+        "body": "This is what most monitoring systems miss. The heatmap shows which sensors move together. The timeline on the right shows when those relationships changed — sudden shifts often mean a single root cause is affecting multiple sensors at once.",
+    },
+    {
+        "anchor": "event_log",
+        "title": "Audit trail",
+        "body": "Every detected anomaly logged with timestamp, severity, parameter, and detection method. Export it as CSV — built to align with FDA 21 CFR Part 11 requirements for electronic records.",
     },
 ]
 
-if not st.session_state.tour_done:
+
+# Help content — same anchors used by ? icons (always available, not just during tour)
+HELP_CONTENT = {
+    "data_source": "Pick your data source. **Simulated Demo** uses pre-built bioreactor data with intentional anomalies — great for testing. **Upload CSV** lets you analyze your own sensor files (must have a timestamp column + 2+ numeric sensor columns). The **☰** button opens advanced settings.",
+    "metrics": "These are the **most recent values** from each sensor. The far-right 'Anomalies' card shows total issues detected. The smaller subtitle (e.g. '3 correlated') means 3 of those involved multiple sensors drifting together — usually a single root cause.",
+    "sensor_readings": "One tab per sensor. The **shaded band** is the normal operating range. **Red diamonds** mark detected anomalies. The card below each chart explains: confidence %, anomaly type (spike/drift/dropout), and a **predictive maintenance window** estimating when the sensor will breach its normal range.",
+    "anomaly_score": "This is the **Isolation Forest output**. The model learned what 'normal' looks like and rates each reading. Positive score = deep in the forest (normal). Negative = easy to isolate (anomaly). Lower than -0.1 usually means something is wrong.",
+    "correlation": "The **heatmap** shows pairwise correlations: red = sensors moving together, blue = opposite, grey = unrelated. The **timeline on the right** flags when sensor relationships changed — these shifts often reveal one root cause affecting multiple sensors simultaneously.",
+    "event_log": "Every detected anomaly is logged here with timestamp, severity, the affected parameter, the message, and how it was detected (ML or statistical). Click **Export event log** to download as CSV. This format is designed for FDA 21 CFR Part 11 audit trails.",
+}
+
+
+def help_heading(title: str, anchor: str):
+    """
+    Render a section heading with a clickable ? icon that reveals help text.
+    Also renders the tour popup next to this section if it's the active step.
+    """
+    # Heading row with ? button
+    col_h, col_q = st.columns([10, 1])
+    with col_h:
+        st.subheader(title)
+    with col_q:
+        # Use popover for the ? icon (Streamlit 1.32+)
+        with st.popover("?", use_container_width=True):
+            st.markdown(f"**{title}**")
+            st.markdown(HELP_CONTENT.get(anchor, "No help available for this section yet."))
+
+    # If tour is active and this is the current step, show the tour popup right here
+    if not st.session_state.tour_done:
+        current_step = st.session_state.tour_step
+        if current_step < len(TOUR_STEPS) and TOUR_STEPS[current_step]["anchor"] == anchor:
+            render_tour_popup()
+
+
+def render_tour_popup():
+    """Render the tour popup card + Next/Skip/Back buttons inline."""
     step = st.session_state.tour_step
     total = len(TOUR_STEPS)
     s = TOUR_STEPS[step]
     progress_pct = int(((step + 1) / total) * 100)
 
-    # Center the tour card vertically on the page — no overlay, no fixed positioning
+    # Unique anchor id so JS can scroll to it
+    anchor_id = f"tour-anchor-{step}"
+
     st.markdown(f"""
-    <div style="
-        max-width: 520px;
-        margin: 80px auto 24px;
-        background: linear-gradient(145deg, #0f1520, #111827);
-        border: 1px solid rgba(56,189,248,0.35);
-        border-radius: 16px;
-        padding: 32px 36px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    <div id="{anchor_id}" style="
+        background: linear-gradient(145deg, rgba(15,21,32,0.95), rgba(17,24,39,0.95));
+        border: 1px solid rgba(56,189,248,0.45);
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin: 8px 0 14px;
+        box-shadow: 0 10px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,248,0.08);
+        position: relative;
+        scroll-margin-top: 80px;
     ">
-      <div style="font-size:2rem;margin-bottom:12px">{s['icon']}</div>
-      <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#38bdf8;margin:0 0 8px">
-        Step {step + 1} of {total}
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:#38bdf8;margin:0 0 6px">
+        Tour · Step {step + 1} of {total}
       </p>
-      <h2 style="font-size:1.4rem;font-weight:500;color:#ffffff;margin:0 0 14px">{s['title']}</h2>
-      <p style="font-size:14px;color:#a0b8cc;line-height:1.7;margin:0 0 20px">{s['body']}</p>
-      <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
+      <h3 style="font-size:1.05rem;font-weight:500;color:#ffffff;margin:0 0 10px">{s['title']}</h3>
+      <p style="font-size:13px;color:#a0b8cc;line-height:1.65;margin:0 0 14px">{s['body']}</p>
+      <div style="height:3px;background:rgba(255,255,255,0.07);border-radius:2px">
         <div style="width:{progress_pct}%;height:100%;background:#38bdf8;border-radius:2px;transition:width 0.4s"></div>
       </div>
     </div>
+    <script>
+      // Scroll the active tour popup into view (skip on step 0 — already at top)
+      (function() {{
+        const stepNum = {step};
+        if (stepNum === 0) return;
+        // Wait briefly for the DOM to settle after Streamlit rerun
+        setTimeout(function() {{
+          const target = window.parent.document.getElementById("{anchor_id}");
+          if (target) {{
+            target.scrollIntoView({{ behavior: "smooth", block: "center" }});
+          }}
+        }}, 200);
+      }})();
+    </script>
     """, unsafe_allow_html=True)
 
-    # Buttons in a centered narrow column under the card
-    btn_left, btn_mid, btn_right = st.columns([2, 3, 2])
-    with btn_mid:
-        if step > 0:
-            c1, c2, c3 = st.columns(3)
-        else:
-            c1, c3 = st.columns(2)
-            c2 = None
+    # Buttons in a tight row
+    if step > 0:
+        c1, c2, c3, spacer = st.columns([1, 1, 1, 3])
+    else:
+        c1, c3, spacer = st.columns([1, 1, 4])
+        c2 = None
 
-        with c1:
-            if st.button("Skip", use_container_width=True, key="tour_skip"):
+    with c1:
+        if st.button("Skip tour", use_container_width=True, key=f"tour_skip_{step}"):
+            st.session_state.tour_done = True
+            st.rerun()
+
+    if c2 is not None:
+        with c2:
+            if st.button("← Back", use_container_width=True, key=f"tour_back_{step}"):
+                st.session_state.tour_step -= 1
+                st.rerun()
+
+    with c3:
+        label = "Finish ✓" if step == total - 1 else "Next →"
+        if st.button(label, use_container_width=True, key=f"tour_next_{step}", type="primary"):
+            if step < total - 1:
+                st.session_state.tour_step += 1
+                st.rerun()
+            else:
                 st.session_state.tour_done = True
                 st.rerun()
 
-        if c2 is not None:
-            with c2:
-                if st.button("← Back", use_container_width=True, key="tour_back"):
-                    st.session_state.tour_step -= 1
-                    st.rerun()
 
-        with c3:
-            label = "Finish ✓" if step == total - 1 else "Next →"
-            if st.button(label, use_container_width=True, key="tour_next", type="primary"):
-                if step < total - 1:
-                    st.session_state.tour_step += 1
-                    st.rerun()
-                else:
-                    st.session_state.tour_done = True
-                    st.rerun()
-
-    # Stop everything else from rendering during tour
-    st.stop()
+# Show a banner at the very top of the page if tour is active and we're on step 1
+# (since step 1 is the data source, which appears before any subheader)
+if not st.session_state.tour_done and st.session_state.tour_step == 0:
+    render_tour_popup()
 
 
 # ── Sidebar (alert settings only) ────────────────────────────
@@ -881,6 +959,10 @@ if df is not None and sensor_cols is not None:
                 st.toast(f"📧 {sent_ok} alert email(s) sent to {alert_email}", icon="✅")
 
     # ── Metric cards ─────────────────────────────────────────
+    # Show tour popup for metrics step (no heading on this section)
+    if not st.session_state.tour_done and st.session_state.tour_step < len(TOUR_STEPS) and TOUR_STEPS[st.session_state.tour_step]["anchor"] == "metrics":
+        render_tour_popup()
+
     # Responsive metric cards — show all sensors
     num_metrics = min(len(sensor_cols), 3) + 1
     metric_cols = st.columns(min(num_metrics, 4))
@@ -906,7 +988,7 @@ if df is not None and sensor_cols is not None:
         st.metric("Anomalies", total_anomalies, delta=f"{len(drift_events)} correlated", delta_color="inverse")
 
     # ── Sensor charts ────────────────────────────────────────
-    st.subheader("Sensor Readings")
+    help_heading("Sensor Readings", "sensor_readings")
 
     # Clean labels and distinct colors per sensor — covers all ATEK/PolySense parameters
     sensor_display = {
@@ -1139,7 +1221,7 @@ if df is not None and sensor_cols is not None:
                   <span style="font-size:13px;color:#34d399">No anomalies detected — all readings within normal range</span>
                 </div>
                 """, unsafe_allow_html=True)
-    st.subheader("Anomaly Score")
+    help_heading("Anomaly Score", "anomaly_score")
     fig_s = go.Figure()
     fig_s.add_trace(go.Scatter(
         x=df["timestamp"], y=df["anomaly_score"], mode="lines",
@@ -1160,7 +1242,7 @@ if df is not None and sensor_cols is not None:
     st.plotly_chart(fig_s, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False})
 
     # ── Correlation section ──────────────────────────────────
-    st.subheader("Correlation Analysis")
+    help_heading("Correlation Analysis", "correlation")
     st.caption("Shows when sensor relationships changed — sudden shifts indicate a single root cause affecting multiple sensors")
 
     col_a, col_b = st.columns(2)
@@ -1312,7 +1394,7 @@ if df is not None and sensor_cols is not None:
         st.plotly_chart(fig_r, use_container_width=True, config={"scrollZoom": False, "displayModeBar": False})
 
     # ── Event log ────────────────────────────────────────────
-    st.subheader("Event Log")
+    help_heading("Event Log", "event_log")
     events = []
     anom_rows = df[df["detected_anomaly"] == 1]
     for _, row in anom_rows.iterrows():
