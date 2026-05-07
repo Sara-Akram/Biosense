@@ -208,14 +208,14 @@ def render_login_page():
     }
 
     .splash-diamond {
-        font-size: 3rem;
+        font-size: 4.5rem;
         color: #a78bfa;
         display: block;
-        margin-bottom: 10px;
+        margin-bottom: 14px;
         animation: diamondPulse 5s ease-in-out infinite;
     }
     .splash-title {
-        font-size: 3rem;
+        font-size: 4.5rem;
         font-weight: 300;
         letter-spacing: 0.06em;
         background: linear-gradient(90deg,
@@ -230,11 +230,11 @@ def render_login_page():
         font-family: system-ui, -apple-system, sans-serif;
     }
     .splash-sub {
-        font-size: 11px;
+        font-size: 13px;
         color: #4a6a8a;
         text-transform: uppercase;
         letter-spacing: 0.22em;
-        margin-top: 8px;
+        margin-top: 12px;
         font-family: system-ui, -apple-system, sans-serif;
     }
     .splash-divider {
@@ -380,7 +380,7 @@ def render_login_page():
     with col:
         # Logo — appears first
         st.markdown("""
-        <div class="splash-logo" style="text-align:center;padding-top:120px;margin-bottom:8px;
+        <div class="splash-logo" style="text-align:center;padding-top:80px;margin-bottom:0;
             position:relative;z-index:2;">
           <span class="splash-diamond">◆</span>
           <div class="splash-title">BioSense</div>
@@ -389,7 +389,7 @@ def render_login_page():
         """, unsafe_allow_html=True)
 
         # Login card — slides up after logo settles
-        st.markdown('<div class="splash-card login-card" style="position:relative;z-index:2;margin-top:12px">', unsafe_allow_html=True)
+        st.markdown('<div class="splash-card login-card" style="position:relative;z-index:2;margin-top:4px">', unsafe_allow_html=True)
 
         st.markdown("""
         <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.18em;

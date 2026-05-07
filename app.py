@@ -90,6 +90,14 @@ st.markdown("""
         background-color: #0a0a0f !important;
     }
 
+    /* Hide the default Streamlit sidebar collapse > arrow since we have our own ☰ button */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    [data-testid="stSidebarCollapseButton"] {
+        display: none !important;
+    }
+
     /* Hide sidebar completely on mobile */
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
@@ -516,8 +524,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header row: logo on left, profile menu on right
-header_left, header_right = st.columns([7, 2])
+# Header row: settings ☰ on far left, logo, profile on right
+header_settings, header_left, header_right = st.columns([0.3, 7, 2])
+with header_settings:
+    st.markdown("<div style='padding-top:18px'></div>", unsafe_allow_html=True)
+    if st.button("☰", use_container_width=True, help="Open settings", key="header_settings_btn"):
+        st.session_state.show_settings = not st.session_state.show_settings
+        st.rerun()
 with header_left:
     st.markdown("""
     <div style="display:flex;align-items:center;margin-bottom:0;padding:4px 0">
@@ -778,16 +791,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-col_toggle1, col_toggle2, col_ham = st.columns([1, 1, 0.3])
+col_toggle1, col_toggle2 = st.columns(2)
 with col_toggle1:
     if st.button("Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
     if st.button("Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
-with col_ham:
-    if st.button("☰", use_container_width=True, help="Open settings"):
-        st.session_state.show_settings = not st.session_state.show_settings
 
 # ── Settings panel (left sidebar) ─────────────────────────────
 if st.session_state.show_settings:
@@ -821,7 +831,8 @@ if st.session_state.show_settings:
             st.session_state.hours = hours
 
         # ── Email alerts: admin-only ──────────────────────────
-        is_admin = user and user.get("role") == "admin"
+        current_user = get_current_user()
+        is_admin = current_user and current_user.get("role") == "admin"
         if is_admin:
             st.divider()
             st.markdown("##### Alert Settings")
