@@ -36,51 +36,35 @@ user = get_current_user()
 if user:
     pic = user.get('picture', '')
 
-    # Float a fixed container in the top-right via CSS
-    st.markdown("""
-    <style>
-    /* Float the user menu container in the top right */
-    div[data-testid="stPopover"]:has(button:has(span:contains("◉"))) {
-        position: fixed !important;
-        top: 10px !important;
-        right: 72px !important;
-        z-index: 99999 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Use a wider column so the name doesn't wrap vertically
+    col_spacer, col_menu = st.columns([8, 2])
+    with col_menu:
+        with st.popover(f"◉ {user['name']}", use_container_width=True):
+            # User info inside the popover
+            if pic:
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;gap:12px;padding:6px 0 14px;
+                    border-bottom:1px solid rgba(56,189,248,0.1);margin-bottom:12px">
+                  <img src="{pic}" style="width:42px;height:42px;border-radius:50%;
+                    border:1px solid rgba(56,189,248,0.3)">
+                  <div>
+                    <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
+                    <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="padding:6px 0 14px;border-bottom:1px solid rgba(56,189,248,0.1);
+                    margin-bottom:12px">
+                  <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
+                  <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-    # Use a container we can position via CSS targeting
-    user_menu_container = st.container()
-    with user_menu_container:
-        # Top-right floating popover
-        col_spacer, col_menu = st.columns([20, 1])
-        with col_menu:
-            with st.popover(f"◉ {user['name']}", use_container_width=True):
-                # User info inside the popover
-                if pic:
-                    st.markdown(f"""
-                    <div style="display:flex;align-items:center;gap:12px;padding:6px 0 14px;
-                        border-bottom:1px solid rgba(56,189,248,0.1);margin-bottom:12px">
-                      <img src="{pic}" style="width:42px;height:42px;border-radius:50%;
-                        border:1px solid rgba(56,189,248,0.3)">
-                      <div>
-                        <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
-                        <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
-                      </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style="padding:6px 0 14px;border-bottom:1px solid rgba(56,189,248,0.1);
-                        margin-bottom:12px">
-                      <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
-                      <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                # Real Streamlit sign out button — this actually works
-                if st.button("Sign out", key="real_logout_btn", use_container_width=True):
-                    logout()
+            # Real Streamlit sign out button
+            if st.button("Sign out", key="real_logout_btn", use_container_width=True):
+                logout()
 
 
 # ── Dark theme CSS ───────────────────────────────────────────
