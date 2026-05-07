@@ -32,39 +32,35 @@ if not is_logged_in():
     st.stop()
 
 # ── Logged-in user badge + dropdown ──────────────────────────
-user = get_current_user()
-if user:
-    pic = user.get('picture', '')
-
-    # Use a wider column so the name doesn't wrap vertically
-    col_spacer, col_menu = st.columns([8, 2])
-    with col_menu:
-        with st.popover(f"◉ {user['name']}", use_container_width=True):
-            # User info inside the popover
-            if pic:
-                st.markdown(f"""
-                <div style="display:flex;align-items:center;gap:12px;padding:6px 0 14px;
-                    border-bottom:1px solid rgba(56,189,248,0.1);margin-bottom:12px">
-                  <img src="{pic}" style="width:42px;height:42px;border-radius:50%;
-                    border:1px solid rgba(56,189,248,0.3)">
-                  <div>
-                    <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
-                    <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
-                  </div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div style="padding:6px 0 14px;border-bottom:1px solid rgba(56,189,248,0.1);
-                    margin-bottom:12px">
-                  <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
-                  <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Real Streamlit sign out button
-            if st.button("Sign out", key="real_logout_btn", use_container_width=True):
-                logout()
+# Defined as a function — called inline with the BioSense header below
+def render_user_menu():
+    user_local = get_current_user()
+    if not user_local:
+        return
+    pic_local = user_local.get('picture', '')
+    with st.popover(user_local['name'], use_container_width=True):
+        if pic_local:
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;gap:12px;padding:6px 0 14px;
+                border-bottom:1px solid rgba(56,189,248,0.1);margin-bottom:12px">
+              <img src="{pic_local}" style="width:42px;height:42px;border-radius:50%;
+                border:1px solid rgba(56,189,248,0.3)">
+              <div>
+                <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user_local['name']}</p>
+                <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user_local['email']}</p>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="padding:6px 0 14px;border-bottom:1px solid rgba(56,189,248,0.1);
+                margin-bottom:12px">
+              <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user_local['name']}</p>
+              <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user_local['email']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        if st.button("Sign out", key="real_logout_btn", use_container_width=True):
+            logout()
 
 
 # ── Dark theme CSS ───────────────────────────────────────────
@@ -488,12 +484,21 @@ st.markdown("""
     display: inline-block;
 }
 </style>
-<div style="display:flex;align-items:center;margin-bottom:0;padding:4px 0">
-  <span class="bs-diamond">◆</span>
-  <span class="bs-title">BioSense</span>
-</div>
 """, unsafe_allow_html=True)
-st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
+
+# Header row: logo on left, profile menu on right
+header_left, header_right = st.columns([7, 2])
+with header_left:
+    st.markdown("""
+    <div style="display:flex;align-items:center;margin-bottom:0;padding:4px 0">
+      <span class="bs-diamond">◆</span>
+      <span class="bs-title">BioSense</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.caption("Predictive anomaly detection  ·  Multi-parameter correlation  ·  Audit trail")
+with header_right:
+    st.markdown("<div style='padding-top:18px'></div>", unsafe_allow_html=True)
+    render_user_menu()
 
 
 # ── Help system + first-time tour ────────────────────────────
