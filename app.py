@@ -15,12 +15,16 @@ from assistant import get_response, SUGGESTED_QUESTIONS
 from auth import is_logged_in, render_login_page, get_current_user, logout, handle_oauth_callback
 
 
+# Initialize show_settings before page config
+if "show_settings" not in st.session_state:
+    st.session_state.show_settings = False
+
 # ── Page config ──────────────────────────────────────────────
 st.set_page_config(
     page_title="BioSense",
     page_icon="◆",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded" if st.session_state.show_settings else "collapsed",
 )
 
 # ── Handle Google OAuth callback first ───────────────────────
@@ -90,12 +94,16 @@ st.markdown("""
         background-color: #0a0a0f !important;
     }
 
-    /* Hide the default Streamlit sidebar collapse > arrow since we have our own ☰ button */
-    [data-testid="collapsedControl"] {
+    /* Hide ALL sidebar collapse/expand arrows — we use our own ☰ button */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebar"] button[kind="header"],
+    [data-testid="stSidebarCollapsedControl"],
+    button[data-testid="baseButton-header"],
+    [data-testid="stSidebar"] [data-testid="stSidebarHeader"] button,
+    [data-testid="stSidebarHeader"] {
         display: none !important;
-    }
-    [data-testid="stSidebarCollapseButton"] {
-        display: none !important;
+        visibility: hidden !important;
     }
 
     /* Hide sidebar completely on mobile */
@@ -205,6 +213,15 @@ st.markdown("""
         color: #ffffff !important;
         transform: translateY(-1px);
         box-shadow: 0 4px 16px rgba(56,189,248,0.1) !important;
+    }
+
+    /* Popover trigger (profile menu) — bigger text */
+    [data-testid="stPopover"] button p {
+        font-size: 16px !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stPopover"] button {
+        padding: 10px 16px !important;
     }
 
     /* Sidebar dark */
