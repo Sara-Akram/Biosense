@@ -35,7 +35,7 @@ FAQ = [
     },
     {
         "keywords": ["email", "alert", "notification", "send email", "resend", "notify"],
-        "answer": "Open the ☰ settings panel (top right). Toggle 'Enable email alerts' on, paste your Resend API key, and add the email to send to. Get a free Resend key at resend.com — they give 100 emails/day free. Click 'Send Test Email' to verify it works.",
+        "answer": "Open the ☰ settings panel on the right side. Toggle 'Enable email alerts' on, paste your Resend API key, and add the email to send to. Get a free Resend key at resend.com — they give 100 emails/day free. Click 'Send Test Email' to verify it works.",
     },
     {
         "keywords": ["audit", "fda", "21 cfr", "compliance", "gxp", "regulatory", "validation"],

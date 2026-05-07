@@ -217,11 +217,11 @@ st.markdown("""
 
     /* Popover trigger (profile menu) — bigger text */
     [data-testid="stPopover"] button p {
-        font-size: 16px !important;
+        font-size: 18px !important;
         font-weight: 500 !important;
     }
     [data-testid="stPopover"] button {
-        padding: 10px 16px !important;
+        padding: 12px 20px !important;
     }
 
     /* Sidebar dark */
@@ -517,14 +517,14 @@ st.markdown("""
     50%       { opacity: 0.45; }
 }
 .bs-diamond {
-    font-size: 2.2rem;
+    font-size: 3rem;
     color: #a78bfa;
     display: inline-block;
-    margin-right: 10px;
+    margin-right: 14px;
     animation: biosense-pulse 5s ease-in-out infinite;
 }
 .bs-title {
-    font-size: 2.4rem;
+    font-size: 3.2rem;
     font-weight: 500;
     letter-spacing: 0.02em;
     background: linear-gradient(
@@ -574,7 +574,7 @@ TOUR_STEPS = [
     {
         "anchor": "data_source",
         "title": "Choose your data",
-        "body": "Start here. Click 'Simulated Demo' to explore with built-in bioreactor data, or 'Upload CSV' for your own files. The ☰ button (top right) opens settings — ML sensitivity, correlation window, email alerts.",
+        "body": "Start here. Click 'Simulated Demo' to explore with built-in bioreactor data, or 'Upload CSV' for your own files. The ☰ button on the right opens settings — ML sensitivity, correlation window, email alerts.",
     },
     {
         "anchor": "metrics",
