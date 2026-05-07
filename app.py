@@ -20,7 +20,7 @@ st.set_page_config(
     page_title="BioSense",
     page_icon="◆",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ── Handle Google OAuth callback first ───────────────────────
@@ -780,118 +780,83 @@ st.markdown("""
 
 col_toggle1, col_toggle2, col_ham = st.columns([1, 1, 0.3])
 with col_toggle1:
-    if st.button("◧  Simulated Demo", use_container_width=True):
+    if st.button("Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
-    if st.button("⬆  Upload CSV", use_container_width=True):
+    if st.button("Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
 with col_ham:
     if st.button("☰", use_container_width=True, help="Open settings"):
         st.session_state.show_settings = not st.session_state.show_settings
 
-# ── Sliding settings panel ────────────────────────────────────
+# ── Settings panel (left sidebar) ─────────────────────────────
 if st.session_state.show_settings:
-    st.markdown("""
-    <div style="background:linear-gradient(145deg,#0f1520,#111827);border:1px solid rgba(56,189,248,0.2);
-        border-radius:14px;padding:20px 24px;margin:8px 0 16px;
-        box-shadow:0 4px 24px rgba(0,0,0,0.4)">
-    """, unsafe_allow_html=True)
+    with st.sidebar:
+        st.markdown("### Settings")
+        st.markdown("##### Analysis Parameters")
 
-    st.markdown("##### Analysis Parameters")
-
-    # ML Sensitivity — slider + number input side by side
-    col_l1, col_n1 = st.columns([3, 1])
-    with col_l1:
+        # ML Sensitivity
         sensitivity = st.slider(
             "ML Sensitivity", min_value=0.01, max_value=0.10,
             value=st.session_state.sensitivity, step=0.01,
             help="Lower = fewer false alarms"
         )
-    with col_n1:
-        sensitivity_input = st.number_input(
-            "Value", min_value=0.01, max_value=0.10,
-            value=sensitivity, step=0.01,
-            label_visibility="hidden", key="sens_num"
-        )
-    sensitivity = sensitivity_input if sensitivity_input != st.session_state.sensitivity else sensitivity
-    st.session_state.sensitivity = sensitivity
+        st.session_state.sensitivity = sensitivity
 
-    # Correlation Window — slider + number input
-    col_l2, col_n2 = st.columns([3, 1])
-    with col_l2:
+        # Correlation Window
         correlation_window = st.slider(
             "Correlation Window (Min)", min_value=5, max_value=60,
             value=st.session_state.correlation_window, step=5,
             help="Rolling window for correlation analysis"
         )
-    with col_n2:
-        corr_input = st.number_input(
-            "Value", min_value=5, max_value=60,
-            value=correlation_window, step=5,
-            label_visibility="hidden", key="corr_num"
-        )
-    correlation_window = corr_input if corr_input != st.session_state.correlation_window else correlation_window
-    st.session_state.correlation_window = correlation_window
+        st.session_state.correlation_window = correlation_window
 
-    # Monitoring window (simulated demo only)
-    hours = st.session_state.hours
-    if data_source == "Simulated demo data":
-        col_l3, col_n3 = st.columns([3, 1])
-        with col_l3:
+        # Monitoring window (simulated demo only)
+        hours = st.session_state.hours
+        if data_source == "Simulated demo data":
             hours = st.slider(
                 "Monitoring Window (Hours)", min_value=6, max_value=48,
                 value=st.session_state.hours, step=1
             )
-        with col_n3:
-            hours_input = st.number_input(
-                "Value", min_value=6, max_value=48,
-                value=hours, step=1,
-                label_visibility="hidden", key="hours_num"
-            )
-        hours = hours_input if hours_input != st.session_state.hours else hours
-        st.session_state.hours = hours
+            st.session_state.hours = hours
 
-    st.divider()
-    st.markdown("##### Alert Settings")
+        # ── Email alerts: admin-only ──────────────────────────
+        is_admin = user and user.get("role") == "admin"
+        if is_admin:
+            st.divider()
+            st.markdown("##### Alert Settings")
+            st.caption("Admin only — recipients of alert emails")
 
-    alerts_enabled = st.toggle("Enable email alerts", value=False)
-    if alerts_enabled:
-        col_a1, col_a2 = st.columns(2)
-        with col_a1:
-            resend_api_key = st.text_input("Resend API Key", type="password", placeholder="re_xxxxxxxxxxxx")
-            alert_email = st.text_input("Send Alerts To", placeholder="lab@yourcompany.com")
-        with col_a2:
-            from_email = st.text_input("Send Alerts From", value="onboarding@resend.dev")
-            alert_severity = st.selectbox("Minimum Severity", ["Critical only", "Warning and above", "All"], index=1)
-        if st.button("Send Test Email"):
-            if resend_api_key and alert_email:
-                from alerts import send_alert
-                with st.spinner("Sending..."):
-                    result = send_alert(
-                        api_key=resend_api_key, to_email=alert_email, from_email=from_email,
-                        alert_type="Test alert", severity="warning", parameter="Temperature",
-                        message="This is a test alert from BioSense. Your email alert system is working correctly.",
-                        value="-77.2 °C", recommendation="No action needed — this is just a test.",
-                    )
-                if result.get("success"):
-                    st.success("Test email sent!")
-                else:
-                    st.error(f"Failed: {result.get('error')}")
-            else:
-                st.warning("Enter your API key and email address first")
+            alerts_enabled = st.toggle("Enable email alerts", value=False)
+            if alerts_enabled:
+                resend_api_key = st.text_input("Resend API Key", type="password", placeholder="re_xxxxxxxxxxxx")
+                alert_email = st.text_input("Send Alerts To", placeholder="lab@yourcompany.com")
+                from_email = st.text_input("Send Alerts From", value="onboarding@resend.dev")
+                alert_severity = st.selectbox("Minimum Severity", ["Critical only", "Warning and above", "All"], index=1)
+                if st.button("Send Test Email"):
+                    if resend_api_key and alert_email:
+                        from alerts import send_alert
+                        with st.spinner("Sending..."):
+                            result = send_alert(
+                                api_key=resend_api_key, to_email=alert_email, from_email=from_email,
+                                alert_type="Test alert", severity="warning", parameter="Temperature",
+                                message="This is a test alert from BioSense. Your email alert system is working correctly.",
+                                value="-77.2 °C", recommendation="No action needed — this is just a test.",
+                            )
+                        if result.get("success"):
+                            st.success("Test email sent!")
+                        else:
+                            st.error(f"Failed: {result.get('error')}")
+                    else:
+                        st.warning("Enter your API key and email address first")
 
-    if st.button("Close Settings ✕", use_container_width=True):
-        st.session_state.show_settings = False
-        st.rerun()
-
-    st.divider()
-    if st.button("Sign out", use_container_width=True):
-        logout()
-
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.divider()
+        if st.button("Close Settings ✕", use_container_width=True):
+            st.session_state.show_settings = False
+            st.rerun()
 
 else:
-    # Defaults when panel is closed
+    # Defaults when sidebar is closed
     sensitivity = st.session_state.sensitivity
     correlation_window = st.session_state.correlation_window
     hours = st.session_state.hours

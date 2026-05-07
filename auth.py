@@ -85,6 +85,15 @@ def is_allowed(email: str) -> bool:
         return False
 
 
+def get_user_role(email: str) -> str:
+    """Look up user role from secrets. Defaults to 'client'."""
+    try:
+        roles = st.secrets.get("user_roles", {})
+        return roles.get(email.lower(), "client")
+    except Exception:
+        return "client"
+
+
 def is_logged_in() -> bool:
     return st.session_state.get("auth_user") is not None
 
@@ -136,6 +145,7 @@ def handle_oauth_callback():
             "email": email,
             "name": user_info.get("name", email.split("@")[0].title()),
             "picture": user_info.get("picture", ""),
+            "role": get_user_role(email),
         }
         st.session_state.auth_error = ""
         st.session_state.tour_done = False
@@ -370,17 +380,16 @@ def render_login_page():
     with col:
         # Logo — appears first
         st.markdown("""
-        <div class="splash-logo" style="text-align:center;padding-top:100px;margin-bottom:36px;
+        <div class="splash-logo" style="text-align:center;padding-top:120px;margin-bottom:8px;
             position:relative;z-index:2;">
           <span class="splash-diamond">◆</span>
           <div class="splash-title">BioSense</div>
           <div class="splash-sub">Predictive Lab Analytics</div>
-          <div class="splash-divider"></div>
         </div>
         """, unsafe_allow_html=True)
 
         # Login card — slides up after logo settles
-        st.markdown('<div class="splash-card login-card" style="position:relative;z-index:2">', unsafe_allow_html=True)
+        st.markdown('<div class="splash-card login-card" style="position:relative;z-index:2;margin-top:12px">', unsafe_allow_html=True)
 
         st.markdown("""
         <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.18em;
