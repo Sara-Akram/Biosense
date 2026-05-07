@@ -35,165 +35,52 @@ if not is_logged_in():
 user = get_current_user()
 if user:
     pic = user.get('picture', '')
-    pic_html = f"<img src='{pic}' style='width:30px;height:30px;border-radius:50%;border:1px solid rgba(56,189,248,0.3);display:block'>" if pic else f"<div style='width:30px;height:30px;border-radius:50%;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;color:#38bdf8'>{user['name'][0].upper()}</div>"
 
-    st.markdown(f"""
-    <style>
-    .user-menu-wrap {{
-        position: fixed;
-        top: 10px;
-        right: 72px;
-        z-index: 99999;
-    }}
-    .user-trigger {{
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        padding: 4px 10px 4px 4px;
-        border-radius: 20px;
-        background: rgba(56,189,248,0.05);
-        border: 1px solid rgba(56,189,248,0.12);
-        transition: all 0.15s;
-        user-select: none;
-    }}
-    .user-trigger:hover {{
-        background: rgba(56,189,248,0.1);
-        border-color: rgba(56,189,248,0.25);
-    }}
-    .user-trigger span {{
-        font-size: 12px;
-        color: #7ab3d4;
-        font-family: system-ui, sans-serif;
-    }}
-    .user-dropdown {{
-        display: none;
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
-        min-width: 200px;
-        background: linear-gradient(145deg, #0f1824, #0c1520);
-        border: 1px solid rgba(56,189,248,0.2);
-        border-radius: 12px;
-        box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-        overflow: hidden;
-        animation: dropIn 0.15s ease-out;
-    }}
-    @keyframes dropIn {{
-        from {{ opacity:0; transform:translateY(-6px); }}
-        to   {{ opacity:1; transform:translateY(0); }}
-    }}
-    .user-menu-wrap:focus-within .user-dropdown,
-    .user-menu-wrap.open .user-dropdown {{
-        display: block;
-    }}
-    .user-trigger:focus {{
-        outline: none;
-    }}
-    .user-info {{
-        padding: 14px 16px;
-        border-bottom: 1px solid rgba(56,189,248,0.08);
-    }}
-    .user-info-name {{
-        font-size: 13px;
-        font-weight: 500;
-        color: #e0e0f0;
-        font-family: system-ui, sans-serif;
-        margin: 0 0 4px;
-    }}
-    .user-info-email {{
-        font-size: 11px;
-        color: #4a6a8a;
-        font-family: system-ui, sans-serif;
-        margin: 0;
-        word-break: break-all;
-    }}
-    .menu-item {{
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 11px 16px;
-        font-size: 13px;
-        color: #a0b8cc;
-        font-family: system-ui, sans-serif;
-        cursor: pointer;
-        transition: background 0.1s;
-        border: none;
-        background: none;
-        width: 100%;
-        text-align: left;
-        text-decoration: none;
-    }}
-    .menu-item:hover {{
-        background: rgba(56,189,248,0.06);
-        color: #e0e0f0;
-    }}
-    .menu-item.danger {{
-        color: #ef4444;
-        border-top: 1px solid rgba(239,68,68,0.1);
-    }}
-    .menu-item.danger:hover {{
-        background: rgba(239,68,68,0.06);
-    }}
-    </style>
-
-    <div class="user-menu-wrap" id="userMenuWrap">
-      <div class="user-trigger" tabindex="0" onclick="this.focus()">
-        {pic_html}
-        <span>{user['name']}</span>
-        <span style="color:#38bdf8;font-size:10px">▾</span>
-      </div>
-      <div class="user-dropdown" id="userDropdown">
-        <div class="user-info">
-          <p class="user-info-name">{user['name']}</p>
-          <p class="user-info-email">{user['email']}</p>
-        </div>
-        <button class="menu-item danger" onclick="handleLogout()">
-          ↪ &nbsp;Sign out
-        </button>
-      </div>
-    </div>
-
-    <script>
-    window.parent.document.addEventListener('click', function(e) {{
-        var wrap = window.parent.document.getElementById('userMenuWrap');
-        if (wrap && !wrap.contains(e.target)) {{
-            var trigger = wrap.querySelector('.user-trigger');
-            if (trigger) trigger.blur();
-        }}
-    }});
-    function handleLogout() {{
-        // Post a message to Streamlit to trigger logout
-        window.parent.postMessage({{type: 'biosense_logout'}}, '*');
-    }}
-    </script>
-    """, unsafe_allow_html=True)
-
-    # Listen for logout message via a hidden Streamlit button trick
-    if "do_logout" not in st.session_state:
-        st.session_state.do_logout = False
-
+    # Float a fixed container in the top-right via CSS
     st.markdown("""
-    <script>
-    window.parent.addEventListener('message', function(e) {
-        if (e.data && e.data.type === 'biosense_logout') {
-            // Find and click the hidden logout button
-            var btns = window.parent.document.querySelectorAll('button');
-            btns.forEach(function(btn) {
-                if (btn.innerText.trim() === '__logout__') btn.click();
-            });
-        }
-    });
-    </script>
+    <style>
+    /* Float the user menu container in the top right */
+    div[data-testid="stPopover"]:has(button:has(span:contains("◉"))) {
+        position: fixed !important;
+        top: 10px !important;
+        right: 72px !important;
+        z-index: 99999 !important;
+    }
+    </style>
     """, unsafe_allow_html=True)
 
-    if st.button("__logout__", key="hidden_logout_btn"):
-        logout()
+    # Use a container we can position via CSS targeting
+    user_menu_container = st.container()
+    with user_menu_container:
+        # Top-right floating popover
+        col_spacer, col_menu = st.columns([20, 1])
+        with col_menu:
+            with st.popover(f"◉ {user['name']}", use_container_width=True):
+                # User info inside the popover
+                if pic:
+                    st.markdown(f"""
+                    <div style="display:flex;align-items:center;gap:12px;padding:6px 0 14px;
+                        border-bottom:1px solid rgba(56,189,248,0.1);margin-bottom:12px">
+                      <img src="{pic}" style="width:42px;height:42px;border-radius:50%;
+                        border:1px solid rgba(56,189,248,0.3)">
+                      <div>
+                        <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
+                        <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="padding:6px 0 14px;border-bottom:1px solid rgba(56,189,248,0.1);
+                        margin-bottom:12px">
+                      <p style="margin:0;font-size:14px;font-weight:500;color:#e0e0f0">{user['name']}</p>
+                      <p style="margin:2px 0 0;font-size:11px;color:#5a8ab5;word-break:break-all">{user['email']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-    # Handle logout from URL param (fallback)
-    if st.query_params.get("logout") == "1":
-        st.query_params.clear()
-        logout()
+                # Real Streamlit sign out button — this actually works
+                if st.button("Sign out", key="real_logout_btn", use_container_width=True):
+                    logout()
 
 
 # ── Dark theme CSS ───────────────────────────────────────────
@@ -492,15 +379,6 @@ st.markdown("""
     }
     [data-testid="stSlider"] [data-baseweb="slider"] {
         margin-top: 8px;
-    }
-
-    /* Hide the internal logout trigger button */
-    div[data-testid="stButton"]:has(button[data-testid="baseButton-secondary"]) {
-        position: absolute !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        width: 1px !important;
-        height: 1px !important;
     }
 
     /* Section heading ? button — circular icon that toggles help */
