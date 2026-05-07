@@ -165,8 +165,38 @@ st.markdown("""
         }
     }
     .block-container {
-        padding-top: 2rem;
-        max-width: 1200px;
+        padding-top: 1rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 100% !important;
+    }
+
+    /* Bump base font size for better readability */
+    html, body, .stApp, [data-testid="stAppViewContainer"] {
+        font-size: 16px;
+    }
+    .stMarkdown p, [data-testid="stMarkdownContainer"] p {
+        font-size: 15px !important;
+    }
+
+    /* Polished button styling */
+    .stButton > button {
+        font-size: 14px !important;
+        font-weight: 400 !important;
+        letter-spacing: 0.02em !important;
+        padding: 11px 18px !important;
+        border-radius: 10px !important;
+        transition: all 0.15s !important;
+        background: linear-gradient(145deg, rgba(15,21,32,0.6), rgba(11,17,28,0.6)) !important;
+        border: 1px solid rgba(56,189,248,0.15) !important;
+        color: #c0d5e5 !important;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(145deg, rgba(20,28,45,0.8), rgba(15,21,32,0.8)) !important;
+        border-color: rgba(56,189,248,0.4) !important;
+        color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(56,189,248,0.1) !important;
     }
 
     /* Sidebar dark */
@@ -750,10 +780,10 @@ st.markdown("""
 
 col_toggle1, col_toggle2, col_ham = st.columns([1, 1, 0.3])
 with col_toggle1:
-    if st.button("📊 Simulated Demo", use_container_width=True):
+    if st.button("◧  Simulated Demo", use_container_width=True):
         st.session_state.data_source = "Simulated demo data"
 with col_toggle2:
-    if st.button("📁 Upload CSV", use_container_width=True):
+    if st.button("⬆  Upload CSV", use_container_width=True):
         st.session_state.data_source = "Upload CSV"
 with col_ham:
     if st.button("☰", use_container_width=True, help="Open settings"):
