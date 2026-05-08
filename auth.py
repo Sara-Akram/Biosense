@@ -101,10 +101,14 @@ def exchange_code_for_user(code: str) -> dict | None:
     )
 
     if not token_resp.ok:
+        st.session_state.auth_error = f"Token error {token_resp.status_code}: {token_resp.text[:200]}"
         return None
 
-    access_token = token_resp.json().get("access_token")
+    token_data = token_resp.json()
+    access_token = token_data.get("access_token")
+
     if not access_token:
+        st.session_state.auth_error = f"No access token. Response: {str(token_data)[:200]}"
         return None
 
     # Step 2 — get user info using the token
@@ -115,9 +119,10 @@ def exchange_code_for_user(code: str) -> dict | None:
     )
 
     if not user_resp.ok:
+        st.session_state.auth_error = f"Userinfo error {user_resp.status_code}: {user_resp.text[:200]}"
         return None
 
-    return user_resp.json()  # has email, name, picture
+    return user_resp.json()
 
 
 def is_allowed(email: str) -> bool:
@@ -190,7 +195,9 @@ def handle_oauth_callback():
         st.query_params.clear()
 
         if not user_info:
-            st.session_state.auth_error = "Could not retrieve your Google account info. Please try again."
+            # Error message already set in exchange_code_for_user
+            if not st.session_state.get("auth_error"):
+                st.session_state.auth_error = "Could not retrieve your Google account info. Please try again."
             return
 
         email = user_info.get("email", "")
