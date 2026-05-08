@@ -1,86 +1,75 @@
 """
 auth.py
 -------
-BioSense login — simple email + password with persistent cookie.
+BioSense login using Supabase Auth.
+Sessions persist across refreshes via Supabase's built-in token system.
 
-Credentials stored in Streamlit secrets:
+Streamlit secrets format:
+[supabase]
+url = "https://xxxx.supabase.co"
+anon_key = "eyJ..."
+
 [users]
-"sara@gmail.com" = { password = "yourpassword", name = "Sara", role = "admin" }
-"maria@atek.com" = { password = "atek2024", name = "Maria Fernanda", role = "client" }
-"matthew@polysense.com" = { password = "poly2024", name = "Matthew Gale", role = "client" }
+"sara@gmail.com" = { role = "admin", name = "Sara" }
+"maria@atek.com" = { role = "client", name = "Maria Fernanda" }
 """
 
 import streamlit as st
-import json
-import hashlib
-import extra_streamlit_components as stx
-
-COOKIE_NAME = "biosense_session"
-COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
+from supabase import create_client
 
 
-def get_cookie_manager():
-    return stx.CookieManager(key="biosense_cookie_mgr")
+def get_supabase():
+    url = st.secrets["supabase"]["url"]
+    key = st.secrets["supabase"]["anon_key"]
+    return create_client(url, key)
 
 
-def save_session_cookie(user: dict):
-    try:
-        get_cookie_manager().set(COOKIE_NAME, json.dumps(user), max_age=COOKIE_MAX_AGE)
-    except Exception:
-        pass
-
-
-def load_session_cookie():
-    try:
-        val = get_cookie_manager().get(COOKIE_NAME)
-        if val:
-            return json.loads(val)
-    except Exception:
-        pass
-    return None
-
-
-def clear_session_cookie():
-    try:
-        get_cookie_manager().delete(COOKIE_NAME)
-    except Exception:
-        pass
-
-
-def check_credentials(email: str, password: str):
-    """Check email + password against Streamlit secrets."""
+def get_user_role(email: str) -> str:
     try:
         users = st.secrets.get("users", {})
+        entry = users.get(email.lower(), {})
+        return entry.get("role", "client")
     except Exception:
-        return None
+        return "client"
 
-    email = email.strip().lower()
-    user = users.get(email)
-    if not user:
-        return None
 
-    stored_pw = user.get("password", "")
-    if stored_pw == password:
-        return {
-            "email": email,
-            "name": user.get("name", email.split("@")[0].title()),
-            "picture": "",
-            "role": user.get("role", "client"),
-        }
-    return None
+def get_user_name(email: str) -> str:
+    try:
+        users = st.secrets.get("users", {})
+        entry = users.get(email.lower(), {})
+        return entry.get("name", email.split("@")[0].title())
+    except Exception:
+        return email.split("@")[0].title()
 
 
 def is_logged_in() -> bool:
+    """Check session state first, then try to restore from Supabase token."""
     if st.session_state.get("auth_user"):
         return True
-    try:
-        user = load_session_cookie()
-        if user:
-            st.session_state.auth_user = user
-            st.session_state.pending_cookie_save = False
-            return True
-    except Exception:
-        pass
+
+    # Try restoring from stored token
+    token = st.session_state.get("sb_access_token")
+    refresh = st.session_state.get("sb_refresh_token")
+
+    if token and refresh:
+        try:
+            sb = get_supabase()
+            result = sb.auth.set_session(token, refresh)
+            if result and result.user:
+                email = result.user.email
+                st.session_state.auth_user = {
+                    "email": email,
+                    "name": get_user_name(email),
+                    "picture": "",
+                    "role": get_user_role(email),
+                }
+                # Refresh the tokens
+                st.session_state.sb_access_token = result.session.access_token
+                st.session_state.sb_refresh_token = result.session.refresh_token
+                return True
+        except Exception:
+            pass
+
     return False
 
 
@@ -89,23 +78,26 @@ def get_current_user():
 
 
 def logout():
+    try:
+        sb = get_supabase()
+        sb.auth.sign_out()
+    except Exception:
+        pass
     st.session_state.auth_user = None
+    st.session_state.sb_access_token = None
+    st.session_state.sb_refresh_token = None
     st.session_state.tour_done = False
     st.session_state.tour_step = 0
-    clear_session_cookie()
     st.rerun()
 
 
 def handle_oauth_callback():
-    """No-op — kept for compatibility, not used with password login."""
-    # Save cookie on the rerun after login
-    if st.session_state.get("pending_cookie_save") and st.session_state.get("auth_user"):
-        save_session_cookie(st.session_state.auth_user)
-        st.session_state.pending_cookie_save = False
+    """No-op — kept for compatibility."""
+    pass
 
 
 def render_login_page():
-    """Splash screen + email/password login form."""
+    """Splash screen + email/password login via Supabase."""
 
     if "auth_error" not in st.session_state:
         st.session_state.auth_error = ""
@@ -134,7 +126,7 @@ def render_login_page():
         0%,100% { opacity:1; transform:scale(1); }
         50%     { opacity:0.45; transform:scale(1.12); }
     }
-    .splash-logo { opacity: 1; transform: translateY(0); }
+    .splash-logo { opacity: 1; }
     .splash-card {
         opacity: 0; transform: translateY(50px);
         transition: opacity 0.7s ease-out, transform 0.7s ease-out;
@@ -164,20 +156,15 @@ def render_login_page():
         background: linear-gradient(145deg,rgba(12,18,30,0.94),rgba(10,14,24,0.97));
         border: 1px solid rgba(56,189,248,0.2); border-radius: 18px;
         padding: 32px 28px;
-        box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(56,189,248,0.08);
+        box-shadow: 0 24px 64px rgba(0,0,0,0.6),inset 0 1px 0 rgba(56,189,248,0.08);
         backdrop-filter: blur(20px);
     }
-    /* Style the login inputs */
     [data-testid="stTextInput"] input {
         background: rgba(255,255,255,0.04) !important;
         border: 1px solid rgba(56,189,248,0.15) !important;
         border-radius: 8px !important;
         color: #e0e0f0 !important;
         font-size: 14px !important;
-    }
-    [data-testid="stTextInput"] input:focus {
-        border-color: rgba(56,189,248,0.4) !important;
-        box-shadow: 0 0 0 2px rgba(56,189,248,0.08) !important;
     }
     .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1a4a7a, #1e3a5f) !important;
@@ -194,7 +181,6 @@ def render_login_page():
     }
     </style>
 
-    <!-- Background: orbs + waveform -->
     <div style="position:fixed;inset:0;background:#07080f;z-index:0;overflow:hidden;pointer-events:none">
       <div style="position:absolute;width:540px;height:540px;border-radius:50%;
           background:radial-gradient(circle,rgba(56,189,248,0.2) 0%,rgba(167,139,250,0.08) 45%,transparent 70%);
@@ -244,7 +230,6 @@ def render_login_page():
     _, col, _ = st.columns([1, 1.2, 1])
 
     with col:
-        # Logo
         st.markdown("""
         <div class="splash-logo" style="text-align:center;padding-top:80px;margin-bottom:0;
             position:relative;z-index:2;">
@@ -254,7 +239,6 @@ def render_login_page():
         </div>
         """, unsafe_allow_html=True)
 
-        # Login card
         st.markdown('<div class="splash-card login-card" style="position:relative;z-index:2;margin-top:4px">', unsafe_allow_html=True)
 
         st.markdown("""
@@ -264,23 +248,44 @@ def render_login_page():
         </p>
         """, unsafe_allow_html=True)
 
-        email = st.text_input("Email", placeholder="you@company.com", key="login_email", label_visibility="collapsed")
-        password = st.text_input("Password", type="password", placeholder="Password", key="login_password", label_visibility="collapsed")
+        email = st.text_input("Email", placeholder="you@company.com",
+                              key="login_email", label_visibility="collapsed")
+        password = st.text_input("Password", type="password", placeholder="Password",
+                                 key="login_password", label_visibility="collapsed")
 
         if st.button("Sign in →", use_container_width=True, type="primary", key="login_btn"):
             if not email or not password:
                 st.session_state.auth_error = "Enter your email and password."
             else:
-                user = check_credentials(email, password)
-                if user:
-                    st.session_state.auth_user = user
-                    st.session_state.auth_error = ""
-                    st.session_state.tour_done = False
-                    st.session_state.tour_step = 0
-                    st.session_state.pending_cookie_save = True
-                    st.rerun()
-                else:
-                    st.session_state.auth_error = "Incorrect email or password."
+                try:
+                    sb = get_supabase()
+                    result = sb.auth.sign_in_with_password({
+                        "email": email.strip().lower(),
+                        "password": password,
+                    })
+                    if result.user:
+                        user_email = result.user.email
+                        st.session_state.auth_user = {
+                            "email": user_email,
+                            "name": get_user_name(user_email),
+                            "picture": "",
+                            "role": get_user_role(user_email),
+                        }
+                        # Store tokens for session persistence
+                        st.session_state.sb_access_token = result.session.access_token
+                        st.session_state.sb_refresh_token = result.session.refresh_token
+                        st.session_state.auth_error = ""
+                        st.session_state.tour_done = False
+                        st.session_state.tour_step = 0
+                        st.rerun()
+                    else:
+                        st.session_state.auth_error = "Incorrect email or password."
+                except Exception as e:
+                    err = str(e).lower()
+                    if "invalid" in err or "credentials" in err or "password" in err:
+                        st.session_state.auth_error = "Incorrect email or password."
+                    else:
+                        st.session_state.auth_error = f"Login error: {str(e)[:100]}"
 
         if st.session_state.auth_error:
             st.markdown(f"""
