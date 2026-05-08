@@ -139,14 +139,20 @@ def get_user_role(email: str) -> str:
 
 
 def is_logged_in() -> bool:
-    # Already in session state
+    # Already in session state — fastest check
     if st.session_state.get("auth_user"):
         return True
+    # Skip cookie check if we're in the middle of an OAuth callback
+    if st.query_params.get("code") or st.query_params.get("error"):
+        return False
     # Try restoring from cookie
-    user = load_session_cookie()
-    if user:
-        st.session_state.auth_user = user
-        return True
+    try:
+        user = load_session_cookie()
+        if user:
+            st.session_state.auth_user = user
+            return True
+    except Exception:
+        pass
     return False
 
 
@@ -176,7 +182,7 @@ def handle_oauth_callback():
         st.query_params.clear()
         return
 
-    if code and not is_logged_in():
+    if code and not st.session_state.get("auth_user"):
         with st.spinner("Signing you in..."):
             user_info = exchange_code_for_user(code)
 
@@ -193,7 +199,7 @@ def handle_oauth_callback():
             st.session_state.auth_error = f"{email} doesn't have access to BioSense. Request access from Sara."
             return
 
-        # Logged in
+        # Store in session state first, cookie saved on next pass
         user_data = {
             "email": email,
             "name": user_info.get("name", email.split("@")[0].title()),
@@ -204,8 +210,13 @@ def handle_oauth_callback():
         st.session_state.auth_error = ""
         st.session_state.tour_done = False
         st.session_state.tour_step = 0
-        save_session_cookie(user_data)
+        st.session_state.pending_cookie_save = True  # save cookie on next rerun
         st.rerun()
+
+    # If we just logged in last rerun, save cookie now that manager is ready
+    if st.session_state.get("pending_cookie_save") and st.session_state.get("auth_user"):
+        save_session_cookie(st.session_state.auth_user)
+        st.session_state.pending_cookie_save = False
 
 
 def render_login_page():
