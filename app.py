@@ -12,7 +12,7 @@ from data_generator import generate_bioreactor_data
 from correlation import analyze_correlations, detect_correlated_drifts
 from sklearn.ensemble import IsolationForest
 from assistant import get_response, SUGGESTED_QUESTIONS
-from auth import is_logged_in, render_login_page, get_current_user, logout, handle_oauth_callback
+from auth import is_logged_in, render_login_page, get_current_user, logout, handle_oauth_callback, inject_token_bridge
 
 
 # Initialize show_settings before page config
@@ -27,7 +27,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Handle Google OAuth callback first ───────────────────────
+# ── Handle token restoration from localStorage on refresh ────
+inject_token_bridge()
+
+# ── Handle OAuth callback (no-op for Supabase) ───────────────
 handle_oauth_callback()
 
 # ── Login gate ───────────────────────────────────────────────

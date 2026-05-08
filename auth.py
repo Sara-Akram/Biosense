@@ -42,19 +42,75 @@ def get_user_name(email: str) -> str:
         return email.split("@")[0].title()
 
 
+def inject_token_bridge():
+    """
+    Inject JS that:
+    1. On load — reads tokens from localStorage and puts them in the URL as query params
+    2. After login — saves tokens from query params to localStorage
+    This bridges localStorage (survives refresh) with Streamlit (reads query params).
+    """
+    st.markdown("""
+    <script>
+    (function() {
+        const ACCESS_KEY = 'bs_access_token';
+        const REFRESH_KEY = 'bs_refresh_token';
+
+        // If tokens in localStorage but not in URL, inject them into URL
+        const access = localStorage.getItem(ACCESS_KEY);
+        const refresh = localStorage.getItem(REFRESH_KEY);
+        const params = new URLSearchParams(window.parent.location.search);
+
+        if (access && refresh && !params.get('bs_access') && !params.get('bs_refresh')) {
+            params.set('bs_access', access);
+            params.set('bs_refresh', refresh);
+            const newUrl = window.parent.location.pathname + '?' + params.toString();
+            window.parent.history.replaceState({}, '', newUrl);
+            window.parent.location.reload();
+        }
+    })();
+    </script>
+    """, unsafe_allow_html=True)
+
+
+def save_tokens_to_browser(access_token: str, refresh_token: str):
+    """Save tokens to localStorage via JS injection."""
+    st.markdown(f"""
+    <script>
+    (function() {{
+        localStorage.setItem('bs_access_token', '{access_token}');
+        localStorage.setItem('bs_refresh_token', '{refresh_token}');
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
+
+
+def clear_tokens_from_browser():
+    """Remove tokens from localStorage on logout."""
+    st.markdown("""
+    <script>
+    (function() {
+        localStorage.removeItem('bs_access_token');
+        localStorage.removeItem('bs_refresh_token');
+    })();
+    </script>
+    """, unsafe_allow_html=True)
+
+
 def is_logged_in() -> bool:
-    """Check session state first, then try to restore from Supabase token."""
+    """Check session state, then URL params (restored from localStorage on refresh)."""
+    # Already in session state
     if st.session_state.get("auth_user"):
         return True
 
-    # Try restoring from stored token
-    token = st.session_state.get("sb_access_token")
-    refresh = st.session_state.get("sb_refresh_token")
+    # Check URL params — set by the JS bridge from localStorage
+    params = st.query_params
+    access = params.get("bs_access")
+    refresh = params.get("bs_refresh")
 
-    if token and refresh:
+    if access and refresh:
         try:
             sb = get_supabase()
-            result = sb.auth.set_session(token, refresh)
+            result = sb.auth.set_session(access, refresh)
             if result and result.user:
                 email = result.user.email
                 st.session_state.auth_user = {
@@ -63,9 +119,10 @@ def is_logged_in() -> bool:
                     "picture": "",
                     "role": get_user_role(email),
                 }
-                # Refresh the tokens
                 st.session_state.sb_access_token = result.session.access_token
                 st.session_state.sb_refresh_token = result.session.refresh_token
+                # Clean tokens from URL
+                st.query_params.clear()
                 return True
         except Exception:
             pass
@@ -83,6 +140,7 @@ def logout():
         sb.auth.sign_out()
     except Exception:
         pass
+    clear_tokens_from_browser()
     st.session_state.auth_user = None
     st.session_state.sb_access_token = None
     st.session_state.sb_refresh_token = None
@@ -271,12 +329,15 @@ def render_login_page():
                             "picture": "",
                             "role": get_user_role(user_email),
                         }
-                        # Store tokens for session persistence
-                        st.session_state.sb_access_token = result.session.access_token
-                        st.session_state.sb_refresh_token = result.session.refresh_token
+                        access = result.session.access_token
+                        refresh = result.session.refresh_token
+                        st.session_state.sb_access_token = access
+                        st.session_state.sb_refresh_token = refresh
                         st.session_state.auth_error = ""
                         st.session_state.tour_done = False
                         st.session_state.tour_step = 0
+                        # Save to localStorage so session persists on refresh
+                        save_tokens_to_browser(access, refresh)
                         st.rerun()
                     else:
                         st.session_state.auth_error = "Incorrect email or password."
