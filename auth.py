@@ -1,7 +1,7 @@
 """
 auth.py
 -------
-BioSense Google OAuth login.
+BioSense Google OAuth login with persistent cookie session.
 
 Flow:
 1. User clicks "Sign in with Google"
@@ -9,12 +9,56 @@ Flow:
 3. Google sends back a code to our redirect URI
 4. We exchange the code for user info
 5. Check if email is in allowed_users list
-6. If yes — log them in
+6. If yes — log them in and store session in cookie
+7. On every page load, check cookie first — if valid, skip login screen
 """
 
 import streamlit as st
 import requests
 import urllib.parse
+import json
+import extra_streamlit_components as stx
+
+COOKIE_NAME = "biosense_session"
+COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days in seconds
+
+
+def get_cookie_manager():
+    return stx.CookieManager(key="biosense_cookie_manager")
+
+
+def save_session_cookie(user: dict):
+    """Save user info to browser cookie so login persists across reruns."""
+    try:
+        cm = get_cookie_manager()
+        cm.set(
+            COOKIE_NAME,
+            json.dumps(user),
+            max_age=COOKIE_MAX_AGE,
+        )
+    except Exception:
+        pass  # Cookie manager not ready yet — session state still works
+
+
+def load_session_cookie() -> dict | None:
+    """Try to restore session from cookie."""
+    try:
+        cm = get_cookie_manager()
+        val = cm.get(COOKIE_NAME)
+        if val:
+            return json.loads(val)
+    except Exception:
+        pass
+    return None
+
+
+def clear_session_cookie():
+    """Delete the session cookie on logout."""
+    try:
+        cm = get_cookie_manager()
+        cm.delete(COOKIE_NAME)
+    except Exception:
+        pass
 
 
 def get_google_auth_url() -> str:
@@ -95,7 +139,15 @@ def get_user_role(email: str) -> str:
 
 
 def is_logged_in() -> bool:
-    return st.session_state.get("auth_user") is not None
+    # Already in session state
+    if st.session_state.get("auth_user"):
+        return True
+    # Try restoring from cookie
+    user = load_session_cookie()
+    if user:
+        st.session_state.auth_user = user
+        return True
+    return False
 
 
 def get_current_user() -> dict | None:
@@ -106,6 +158,7 @@ def logout():
     st.session_state.auth_user = None
     st.session_state.tour_done = False
     st.session_state.tour_step = 0
+    clear_session_cookie()
     st.rerun()
 
 
@@ -141,15 +194,17 @@ def handle_oauth_callback():
             return
 
         # Logged in
-        st.session_state.auth_user = {
+        user_data = {
             "email": email,
             "name": user_info.get("name", email.split("@")[0].title()),
             "picture": user_info.get("picture", ""),
             "role": get_user_role(email),
         }
+        st.session_state.auth_user = user_data
         st.session_state.auth_error = ""
         st.session_state.tour_done = False
         st.session_state.tour_step = 0
+        save_session_cookie(user_data)
         st.rerun()
 
 
