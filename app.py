@@ -1608,8 +1608,83 @@ if df is not None and sensor_cols is not None:
 
     if events:
         ev_df = pd.DataFrame(events).sort_values("timestamp", ascending=False).head(100)
-        st.dataframe(ev_df, use_container_width=True, height=350)
-        st.download_button("Export event log", ev_df.to_csv(index=False), "biosense_events.csv", "text/csv")
+
+        # ── Always-visible search + filter bar ───────────────
+        fc1, fc2, fc3, fc4 = st.columns([3, 1.5, 1.5, 1.5])
+        with fc1:
+            search_text = st.text_input(
+                "Search events",
+                placeholder="Search parameter, message, type...",
+                key="event_search"
+            )
+        with fc2:
+            all_severities = ["All"] + sorted(ev_df["severity"].dropna().unique().tolist())
+            severity_filter = st.selectbox("Severity", all_severities, key="event_severity")
+        with fc3:
+            all_types = ["All"] + sorted(ev_df["type"].dropna().unique().tolist())
+            type_filter = st.selectbox("Type", all_types, key="event_type")
+        with fc4:
+            all_params = ["All"] + sorted(ev_df["parameter"].astype(str).unique().tolist())
+            param_filter = st.selectbox("Parameter", all_params, key="event_param")
+
+        # Apply filters
+        filtered = ev_df.copy()
+        if search_text:
+            q = search_text.lower()
+            filtered = filtered[
+                filtered["message"].astype(str).str.lower().str.contains(q, na=False) |
+                filtered["parameter"].astype(str).str.lower().str.contains(q, na=False) |
+                filtered["type"].astype(str).str.lower().str.contains(q, na=False) |
+                filtered["method"].astype(str).str.lower().str.contains(q, na=False)
+            ]
+        if severity_filter != "All":
+            filtered = filtered[filtered["severity"] == severity_filter]
+        if type_filter != "All":
+            filtered = filtered[filtered["type"] == type_filter]
+        if param_filter != "All":
+            filtered = filtered[filtered["parameter"].astype(str) == param_filter]
+
+        # Result count badge
+        total = len(ev_df)
+        shown = len(filtered)
+        if shown < total:
+            st.caption(f"Showing {shown} of {total} events · {total - shown} filtered out")
+        else:
+            st.caption(f"{total} events total")
+
+        # Table — hide Streamlit's built-in search since we have our own
+        st.dataframe(
+            filtered,
+            use_container_width=True,
+            height=320,
+            column_config={
+                "timestamp": st.column_config.DatetimeColumn("Timestamp", format="MMM D, YYYY · HH:mm:ss"),
+                "type": st.column_config.TextColumn("Type"),
+                "severity": st.column_config.TextColumn("Severity"),
+                "parameter": st.column_config.TextColumn("Parameter"),
+                "message": st.column_config.TextColumn("Message", width="large"),
+                "method": st.column_config.TextColumn("Method"),
+            },
+            hide_index=True,
+        )
+
+        col_dl, col_clear = st.columns([1, 1])
+        with col_dl:
+            st.download_button(
+                "Export filtered log",
+                filtered.to_csv(index=False),
+                "biosense_events.csv",
+                "text/csv",
+                use_container_width=True,
+            )
+        with col_clear:
+            if (search_text or severity_filter != "All" or type_filter != "All" or param_filter != "All"):
+                if st.button("Clear filters", use_container_width=True, key="clear_filters"):
+                    st.session_state.event_search = ""
+                    st.session_state.event_severity = "All"
+                    st.session_state.event_type = "All"
+                    st.session_state.event_param = "All"
+                    st.rerun()
     else:
         st.markdown("<div style='padding:20px;text-align:center;color:#4a4a6a'>No events detected</div>", unsafe_allow_html=True)
 
