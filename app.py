@@ -1618,13 +1618,13 @@ if df is not None and sensor_cols is not None:
                 key="event_search"
             )
         with fc2:
-            all_severities = ["All"] + sorted(ev_df["severity"].dropna().unique().tolist())
+            all_severities = ["All severities"] + sorted(ev_df["severity"].dropna().unique().tolist())
             severity_filter = st.selectbox("Severity", all_severities, key="event_severity")
         with fc3:
-            all_types = ["All"] + sorted(ev_df["type"].dropna().unique().tolist())
+            all_types = ["All types"] + sorted(ev_df["type"].dropna().unique().tolist())
             type_filter = st.selectbox("Type", all_types, key="event_type")
         with fc4:
-            all_params = ["All"] + sorted(ev_df["parameter"].astype(str).unique().tolist())
+            all_params = ["All parameters"] + sorted(ev_df["parameter"].astype(str).unique().tolist())
             param_filter = st.selectbox("Parameter", all_params, key="event_param")
 
         # Apply filters
@@ -1637,22 +1637,22 @@ if df is not None and sensor_cols is not None:
                 filtered["type"].astype(str).str.lower().str.contains(q, na=False) |
                 filtered["method"].astype(str).str.lower().str.contains(q, na=False)
             ]
-        if severity_filter != "All":
+        if severity_filter != "All severities":
             filtered = filtered[filtered["severity"] == severity_filter]
-        if type_filter != "All":
+        if type_filter != "All types":
             filtered = filtered[filtered["type"] == type_filter]
-        if param_filter != "All":
+        if param_filter != "All parameters":
             filtered = filtered[filtered["parameter"].astype(str) == param_filter]
 
-        # Result count badge
+        # Result count
         total = len(ev_df)
         shown = len(filtered)
         if shown < total:
             st.caption(f"Showing {shown} of {total} events · {total - shown} filtered out")
         else:
-            st.caption(f"{total} events total")
+            st.caption(f"{total} events — {ev_df['type'].value_counts().to_dict()}")
 
-        # Table — hide Streamlit's built-in search since we have our own
+        # Table
         st.dataframe(
             filtered,
             use_container_width=True,
@@ -1663,27 +1663,35 @@ if df is not None and sensor_cols is not None:
                 "severity": st.column_config.TextColumn("Severity"),
                 "parameter": st.column_config.TextColumn("Parameter"),
                 "message": st.column_config.TextColumn("Message", width="large"),
-                "method": st.column_config.TextColumn("Method"),
+                "method": st.column_config.TextColumn("Detection Method"),
             },
             hide_index=True,
         )
 
+        # Export — clean up column names and format timestamps
+        export_df = filtered.copy()
+        export_df.columns = ["Timestamp", "Event Type", "Severity", "Parameter", "Message", "Detection Method"]
+        if "Timestamp" in export_df.columns:
+            export_df["Timestamp"] = export_df["Timestamp"].astype(str)
+
         col_dl, col_clear = st.columns([1, 1])
         with col_dl:
             st.download_button(
-                "Export filtered log",
-                filtered.to_csv(index=False),
+                "Export event log",
+                export_df.to_csv(index=False),
                 "biosense_events.csv",
                 "text/csv",
                 use_container_width=True,
             )
         with col_clear:
-            if (search_text or severity_filter != "All" or type_filter != "All" or param_filter != "All"):
+            active = (search_text or severity_filter != "All severities" or
+                      type_filter != "All types" or param_filter != "All parameters")
+            if active:
                 if st.button("Clear filters", use_container_width=True, key="clear_filters"):
                     st.session_state.event_search = ""
-                    st.session_state.event_severity = "All"
-                    st.session_state.event_type = "All"
-                    st.session_state.event_param = "All"
+                    st.session_state.event_severity = "All severities"
+                    st.session_state.event_type = "All types"
+                    st.session_state.event_param = "All parameters"
                     st.rerun()
     else:
         st.markdown("<div style='padding:20px;text-align:center;color:#4a4a6a'>No events detected</div>", unsafe_allow_html=True)
