@@ -358,8 +358,17 @@ def render_login_page():
             """, unsafe_allow_html=True)
 
         st.markdown("""
-        <p style="text-align:center;font-size:11px;color:#1e2a3a;margin-top:16px;padding-bottom:8px">
+        <p style="text-align:center;font-size:11px;color:#1e2a3a;margin-top:16px;padding-bottom:4px">
           Access is by invite only
         </p>
+        <div style="background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.12);
+            border-radius:8px;padding:10px 14px;margin-top:6px;margin-bottom:8px">
+          <p style="font-size:11px;color:#5a8ab5;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.1em">
+            Demo access
+          </p>
+          <p style="font-size:12px;color:#7ab3d4;margin:0;font-family:monospace">
+            demo@biosense.app &nbsp;·&nbsp; biosense2026
+          </p>
+        </div>
         </div>
         """, unsafe_allow_html=True)
