@@ -1585,6 +1585,13 @@ if df is not None and sensor_cols is not None:
 
     # ── Event log ────────────────────────────────────────────
     help_heading("Event Log", "event_log")
+
+    # Get logged-in user for audit trail
+    import hashlib
+    from datetime import datetime as dt
+    current_user = get_current_user()
+    logged_in_email = current_user.get("email", "unknown") if current_user else "unknown"
+
     events = []
     anom_rows = df[df["detected_anomaly"] == 1]
     for _, row in anom_rows.iterrows():
@@ -1593,23 +1600,43 @@ if df is not None and sensor_cols is not None:
             m, s = df[c].mean(), df[c].std()
             zs[c] = abs((row[c] - m) / (s + 1e-8))
         worst = max(zs, key=zs.get)
+        ts_str = str(row["timestamp"])
+        msg = f"{worst} = {row[worst]:.2f} (z: {zs[worst]:.1f})"
+        severity = "critical" if zs[worst] > 4 else "warning"
+        # SHA-256 hash of key fields for tamper detection
+        raw = f"{ts_str}|Anomaly|{severity}|{worst}|{msg}|ML + statistical|{logged_in_email}"
+        entry_hash = hashlib.sha256(raw.encode()).hexdigest()[:16]
         events.append({
-            "timestamp": row["timestamp"], "type": "Anomaly",
-            "severity": "critical" if zs[worst] > 4 else "warning",
-            "parameter": worst, "message": f"{worst} = {row[worst]:.2f} (z: {zs[worst]:.1f})",
+            "timestamp": row["timestamp"],
+            "type": "Anomaly",
+            "severity": severity,
+            "parameter": worst,
+            "message": msg,
             "method": "ML + statistical",
+            "reviewed_by": logged_in_email,
+            "entry_hash": entry_hash,
         })
     for ev in drift_events:
+        ts_str = str(ev.get("start_time", ""))
+        msg = ev["message"]
+        severity = ev["severity"]
+        raw = f"{ts_str}|Correlated drift|{severity}|{ev['parameters']}|{msg}|correlation|{logged_in_email}"
+        entry_hash = hashlib.sha256(raw.encode()).hexdigest()[:16]
         events.append({
-            "timestamp": ev.get("start_time", ""), "type": "Correlated drift",
-            "severity": ev["severity"], "parameter": ev["parameters"],
-            "message": ev["message"], "method": "correlation",
+            "timestamp": ev.get("start_time", ""),
+            "type": "Correlated drift",
+            "severity": severity,
+            "parameter": ev["parameters"],
+            "message": msg,
+            "method": "correlation",
+            "reviewed_by": logged_in_email,
+            "entry_hash": entry_hash,
         })
 
     if events:
         ev_df = pd.DataFrame(events).sort_values("timestamp", ascending=False).head(100)
 
-        # ── Always-visible search + filter bar ───────────────
+        # ── Search + filter bar ───────────────────────────────
         fc1, fc2, fc3 = st.columns([3, 1.5, 1.5])
         with fc1:
             search_text = st.text_input(
@@ -1658,27 +1685,127 @@ if df is not None and sensor_cols is not None:
                 "parameter": st.column_config.TextColumn("Parameter"),
                 "message": st.column_config.TextColumn("Message", width="large"),
                 "method": st.column_config.TextColumn("Detection Method"),
+                "reviewed_by": st.column_config.TextColumn("Reviewed By"),
+                "entry_hash": st.column_config.TextColumn("Entry Hash (SHA-256)"),
             },
             hide_index=True,
         )
 
-        # Export + Clear filters — compact, same row, auto-width
+        # Build clean export dataframe
+        export_df = filtered.copy()
+        export_df["timestamp"] = export_df["timestamp"].astype(str)
+        export_df.columns = [
+            "Timestamp", "Event Type", "Severity", "Parameter",
+            "Message", "Detection Method", "Reviewed By", "Entry Hash (SHA-256)"
+        ]
+
+        # Generate PDF bytes
+        def generate_pdf(df_for_pdf, user_email):
+            try:
+                from reportlab.lib.pagesizes import A4, landscape
+                from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+                from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                from reportlab.lib import colors
+                from reportlab.lib.units import mm
+                import io
+
+                buf = io.BytesIO()
+                doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                                        leftMargin=15*mm, rightMargin=15*mm,
+                                        topMargin=15*mm, bottomMargin=15*mm)
+                styles = getSampleStyleSheet()
+
+                title_style = ParagraphStyle(
+                    "BioTitle",
+                    parent=styles["Title"],
+                    textColor=colors.HexColor("#0f172a"),
+                    fontSize=18,
+                    spaceAfter=4,
+                )
+                subtitle_style = ParagraphStyle(
+                    "BioSub",
+                    parent=styles["Normal"],
+                    textColor=colors.HexColor("#475569"),
+                    fontSize=9,
+                )
+                footer_style = ParagraphStyle(
+                    "BioFooter",
+                    parent=styles["Normal"],
+                    textColor=colors.HexColor("#94a3b8"),
+                    fontSize=8,
+                )
+
+                elements = []
+                elements.append(Paragraph("BioSense Audit Trail", title_style))
+                elements.append(Paragraph(
+                    f"Exported: {dt.now().strftime('%B %d, %Y at %H:%M UTC')}  ·  Generated by: {user_email}",
+                    subtitle_style
+                ))
+                elements.append(Spacer(1, 8*mm))
+
+                cols_to_show = ["Timestamp", "Event Type", "Severity", "Parameter",
+                                "Message", "Detection Method", "Reviewed By", "Entry Hash (SHA-256)"]
+                rows = [cols_to_show]
+                for _, row in df_for_pdf.iterrows():
+                    rows.append([str(row[c])[:45] for c in cols_to_show])
+
+                t = Table(rows, repeatRows=1)
+                t.setStyle(TableStyle([
+                    # Header row
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e40af")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 8),
+                    # Data rows — alternating white / light grey
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1),
+                     [colors.white, colors.HexColor("#f8fafc")]),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#0f172a")),
+                    ("FONTSIZE", (0, 1), (-1, -1), 7),
+                    # Grid
+                    ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e2e8f0")),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1e40af")),
+                    # Padding
+                    ("PADDING", (0, 0), (-1, -1), 5),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    # Critical rows — light red tint
+                ]))
+                elements.append(t)
+                elements.append(Spacer(1, 6*mm))
+                elements.append(Paragraph(
+                    "© 2026 BioSense. All rights reserved. "
+                    "This audit trail is generated for compliance purposes. "
+                    "Entry hashes (SHA-256) can be used to verify record integrity.",
+                    footer_style
+                ))
+
+                doc.build(elements)
+                buf.seek(0)
+                return buf.getvalue()
+            except Exception as e:
+                return None
+
         active = (search_text or severity_filter != "All severities" or param_filter != "All parameters")
 
-        export_df = filtered.copy()
-        export_df.columns = ["Timestamp", "Event Type", "Severity", "Parameter", "Message", "Detection Method"]
-        export_df["Timestamp"] = export_df["Timestamp"].astype(str)
-
-        btn_cols = st.columns([2, 2, 6])
+        btn_cols = st.columns([2, 2, 2, 4])
         with btn_cols[0]:
             st.download_button(
-                "Export log",
+                "Export CSV",
                 export_df.to_csv(index=False),
-                "biosense_events.csv",
+                "biosense_audit_log.csv",
                 "text/csv",
                 use_container_width=True,
             )
         with btn_cols[1]:
+            pdf_bytes = generate_pdf(export_df, logged_in_email)
+            if pdf_bytes:
+                st.download_button(
+                    "Export PDF",
+                    pdf_bytes,
+                    "biosense_audit_log.pdf",
+                    "application/pdf",
+                    use_container_width=True,
+                )
+        with btn_cols[2]:
             if active:
                 if st.button("Clear filters", use_container_width=True, key="clear_filters"):
                     st.session_state.event_search = ""
