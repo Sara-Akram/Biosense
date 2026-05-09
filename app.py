@@ -1610,20 +1610,17 @@ if df is not None and sensor_cols is not None:
         ev_df = pd.DataFrame(events).sort_values("timestamp", ascending=False).head(100)
 
         # ── Always-visible search + filter bar ───────────────
-        fc1, fc2, fc3, fc4 = st.columns([3, 1.5, 1.5, 1.5])
+        fc1, fc2, fc3 = st.columns([3, 1.5, 1.5])
         with fc1:
             search_text = st.text_input(
                 "Search events",
-                placeholder="Search parameter, message, type...",
+                placeholder="Search parameter, message...",
                 key="event_search"
             )
         with fc2:
             all_severities = ["All severities"] + sorted(ev_df["severity"].dropna().unique().tolist())
             severity_filter = st.selectbox("Severity", all_severities, key="event_severity")
         with fc3:
-            all_types = ["All types"] + sorted(ev_df["type"].dropna().unique().tolist())
-            type_filter = st.selectbox("Type", all_types, key="event_type")
-        with fc4:
             all_params = ["All parameters"] + sorted(ev_df["parameter"].astype(str).unique().tolist())
             param_filter = st.selectbox("Parameter", all_params, key="event_param")
 
@@ -1634,13 +1631,10 @@ if df is not None and sensor_cols is not None:
             filtered = filtered[
                 filtered["message"].astype(str).str.lower().str.contains(q, na=False) |
                 filtered["parameter"].astype(str).str.lower().str.contains(q, na=False) |
-                filtered["type"].astype(str).str.lower().str.contains(q, na=False) |
                 filtered["method"].astype(str).str.lower().str.contains(q, na=False)
             ]
         if severity_filter != "All severities":
             filtered = filtered[filtered["severity"] == severity_filter]
-        if type_filter != "All types":
-            filtered = filtered[filtered["type"] == type_filter]
         if param_filter != "All parameters":
             filtered = filtered[filtered["parameter"].astype(str) == param_filter]
 
@@ -1650,7 +1644,7 @@ if df is not None and sensor_cols is not None:
         if shown < total:
             st.caption(f"Showing {shown} of {total} events · {total - shown} filtered out")
         else:
-            st.caption(f"{total} events — {ev_df['type'].value_counts().to_dict()}")
+            st.caption(f"{total} events total")
 
         # Table
         st.dataframe(
@@ -1668,29 +1662,27 @@ if df is not None and sensor_cols is not None:
             hide_index=True,
         )
 
-        # Export — clean up column names and format timestamps
+        # Export + Clear filters — compact, same row, auto-width
+        active = (search_text or severity_filter != "All severities" or param_filter != "All parameters")
+
         export_df = filtered.copy()
         export_df.columns = ["Timestamp", "Event Type", "Severity", "Parameter", "Message", "Detection Method"]
-        if "Timestamp" in export_df.columns:
-            export_df["Timestamp"] = export_df["Timestamp"].astype(str)
+        export_df["Timestamp"] = export_df["Timestamp"].astype(str)
 
-        col_dl, col_clear = st.columns([1, 1])
-        with col_dl:
+        btn_cols = st.columns([2, 2, 6])
+        with btn_cols[0]:
             st.download_button(
-                "Export event log",
+                "Export log",
                 export_df.to_csv(index=False),
                 "biosense_events.csv",
                 "text/csv",
                 use_container_width=True,
             )
-        with col_clear:
-            active = (search_text or severity_filter != "All severities" or
-                      type_filter != "All types" or param_filter != "All parameters")
+        with btn_cols[1]:
             if active:
                 if st.button("Clear filters", use_container_width=True, key="clear_filters"):
                     st.session_state.event_search = ""
                     st.session_state.event_severity = "All severities"
-                    st.session_state.event_type = "All types"
                     st.session_state.event_param = "All parameters"
                     st.rerun()
     else:
@@ -1698,7 +1690,7 @@ if df is not None and sensor_cols is not None:
 
     st.divider()
     st.markdown("<div style='text-align:center;padding:1rem 0'>"
-                "<span style='color:#2a2a3d;font-size:12px'>◆ BioSense v3.0</span>"
+                "<span style='color:#4a5568;font-size:12px'>◆ BioSense v3.0 &nbsp;·&nbsp; © 2026 BioSense. All rights reserved.</span>"
                 "</div>", unsafe_allow_html=True)
 
 else:
