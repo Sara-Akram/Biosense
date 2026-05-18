@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ILM — Online Tutoring Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="main.css" />
+  <link rel="stylesheet" href="splash.css" />
+</head>
+<body>
+
+  <!-- SPLASH -->
+  <div id="splash">
+    <video id="splash-video" autoplay muted playsinline>
+      <source src="splash.mp4" type="video/mp4" />
+    </video>
+    <div id="splash-overlay"></div>
+
+    <!-- Login panel — appears after video -->
+    <div id="splash-login">
+      <h2>Welcome to ILM</h2>
+      <p>Who are you signing in as?</p>
+      <div class="role-cards">
+
+        <div class="role-card" onclick="ILM.selectRole('teacher')">
+          <div class="role-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <div class="role-label">Teacher</div>
+          <div class="role-sub">Manage sessions,<br>students & earnings</div>
+        </div>
+
+        <div class="role-card" onclick="ILM.selectRole('student')">
+          <div class="role-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="role-label">Student</div>
+          <div class="role-sub">Join sessions &<br>track progress</div>
+        </div>
+
+        <div class="role-card" onclick="ILM.selectRole('admin')">
+          <div class="role-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div class="role-label">Administrator</div>
+          <div class="role-sub">Platform management<br>& oversight</div>
+        </div>
+
+      </div>
+    </div>
+
+    <button class="skip-btn" onclick="ILM.showApp()">Skip intro</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app" aria-hidden="true">
+    <header id="main-nav">
+      <div class="logo">ILM</div>
+      <nav class="nav-tabs" role="navigation" aria-label="Main">
+        <button class="nav-tab active" data-page="dashboard">Dashboard</button>
+        <button class="nav-tab" data-page="sessions">Sessions</button>
+        <button class="nav-tab" data-page="students">Students</button>
+        <button class="nav-tab" data-page="earnings">Earnings</button>
+      </nav>
+      <div class="nav-user">
+        <span id="nav-role-badge" class="nav-role-badge">Teacher</span>
+        <span class="nav-username">Sara A.</span>
+        <div class="avatar">SA</div>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <aside class="sidebar">
+        <nav>
+          <button class="sidebar-item active" data-page="dashboard">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Overview
+          </button>
+          <button class="sidebar-item" data-page="sessions">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Schedule
+          </button>
+          <button class="sidebar-item" data-page="students">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Students
+          </button>
+          <div class="sidebar-label">Tools</div>
+          <button class="sidebar-item" data-page="classroom">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg>
+            Classroom
+          </button>
+          <button class="sidebar-item" data-page="messages">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Messages
+          </button>
+          <div class="sidebar-label">Account</div>
+          <button class="sidebar-item" data-page="earnings">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+            Earnings
+          </button>
+          <button class="sidebar-item" data-page="settings">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </button>
+        </nav>
+      </aside>
+      <main id="page-content" class="main-content"></main>
+    </div>
+  </div>
+
+  <script src="pages.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
